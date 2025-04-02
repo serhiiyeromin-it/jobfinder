@@ -9,20 +9,17 @@ def crawl_stepstone():
     location = "berlin"
     radius = 30
 
-    base_url = "https://www.stepstone.de/jobs"
     formatted_keywords = '_'.join(keywords).lower()
 
-    query_params = {
-        "radius": radius,
-        "searchOrigin": "membersarea",
-        "q": ",".join(keywords)
-    }
-    query_string = urlencode(query_params)
-
-    search_url = f"{base_url}/{formatted_keywords}/in-{location}?{query_string}"
+    query_params = f"radius={radius}&searchOrigin=membersarea&q=JIRA,%20Python,%20JavaScript"
+    search_url = f"https://www.stepstone.de/jobs/{formatted_keywords}/in-{location}?{query_params}"
     print(f"Such-URL: {search_url}")
 
-    response = requests.get(search_url)
+    headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    }
+
+    response = requests.get(search_url, headers=headers, timeout=10)
 
     if response.status_code == 200:
         soup = BeautifulSoup(response.content, 'html.parser')
