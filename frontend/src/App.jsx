@@ -1,5 +1,4 @@
-
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './App.css'
 
 function App() {
@@ -7,6 +6,13 @@ function App() {
   const [location, setLocation] = useState("");
   const [radius, setRadius] = useState("30");
   const [jobs, setJobs] = useState([]);
+
+  useEffect(() => {
+    fetch("http://localhost:3050/jobsuchen")
+      .then((res) => res.json())
+      .then((data) => setJobs(data))
+      .catch((err) => console.error("Fehler beim Abrufen der Jobs:", err));
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault(); // verhindert Seitenreload
@@ -90,7 +96,8 @@ function App() {
         ) : (
           <ul>
             {jobs.map((job, index) => (
-              <li key={index}>{job.title} - {job.location}</li>
+              <li key={index}><strong>{job.title}</strong> bei {job.company} – <a href={job.link} target="_blank" rel="noopener noreferrer">Details</a>
+              </li>
             ))}
           </ul>
         )}

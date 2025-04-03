@@ -17,8 +17,7 @@ collection = db['jobs']  # Beispiel: Collection namens 'jobs'
 job_data = {
     "title": "Python Developer",
     "company": "Example Company",
-    "location": "Berlin",
-    "salary": "60,000 EUR"
+    "link": "https://example.com/job/python-developer",
 }
 
 # Einfügen eines Dokuments

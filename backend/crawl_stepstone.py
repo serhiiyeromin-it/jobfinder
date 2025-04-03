@@ -52,11 +52,12 @@ def crawl_stepstone(keywords, location, radius):
                         link = job.find('a', class_='res-1foik6i')['href'] if job.find('a', class_='res-1foik6i') else "Kein Link verfügbar"
                         company = job.find('span', class_='res-btchsq').text.strip() if job.find('span', class_='res-btchsq') else "Keine Firma angegeben"
 
-                        all_jobs.append({
-                            'title': title,
-                            'company': company,
-                            'link': f"https://www.stepstone.de{link}" if link != "Kein Link verfügbar" else link
-                        })
+                        job_data = {
+                        'title': title,
+                        'company': company,
+                        'link': f"https://www.stepstone.de{link}" if link != "Kein Link verfügbar" else link
+                        }
+                        all_jobs.append(job_data)
 
                     print(f"Seite {page}: {len(job_listings)} Jobs gefunden.")
 
