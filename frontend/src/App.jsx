@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react'
 import './App.css'
 
 function App() {
-  const [keywords, setKeywords] = useState([]);
-  const [location, setLocation] = useState("");
-  const [radius, setRadius] = useState("30");
-  const [jobs, setJobs] = useState([]);
+  const [keywords, setKeywords] = useState([]); // Array zum Speichern der Suchbegriffe
+  const [location, setLocation] = useState(""); // String für den Standort
+  const [radius, setRadius] = useState("30"); // String für den Radius
+  const [jobs, setJobs] = useState([]); // Array zum Speichern der gefundenen Jobs
+  const [isLoading, setIsLoading] = useState(false); // Boolean für den Ladezustand
 
-  useEffect(() => {
+  useEffect(() => { // 
     fetch("http://localhost:3050/jobsuchen")
       .then((res) => res.json())
       .then((data) => setJobs(data))
@@ -15,9 +16,9 @@ function App() {
   }, []);
 
   const handleSubmit = (e) => {
-    e.preventDefault(); // verhindert Seitenreload
+    e.preventDefault();
+    setIsLoading(true);
 
-    // Für späteren Backend-POST
     fetch("http://localhost:3050/jobsuchen", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -25,10 +26,12 @@ function App() {
     })
       .then((res) => res.json())
       .then((data) => {
-        setJobs(data); // Ergebnisse anzeigen
+        setJobs(data);
+        setIsLoading(false);
       })
       .catch((err) => {
         console.error("Fehler beim Abrufen der Jobs:", err);
+        setIsLoading(false);
       });
   };
 
@@ -36,7 +39,18 @@ function App() {
     const keywordInput = document.getElementById("keyword");
     if (keywordInput.value.trim()) {
       setKeywords([...keywords, keywordInput.value.trim()]);
-      keywordInput.value = ""; // Eingabefeld leeren
+      keywordInput.value = "";
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    const keywordInput = e.target;
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (keywordInput.value.trim()) {
+        setKeywords([...keywords, keywordInput.value.trim()]);
+        keywordInput.value = "";
+      }
     }
   };
 
@@ -55,6 +69,7 @@ function App() {
             type="text"
             id="keyword"
             placeholder="Neuen Suchbegriff eingeben"
+            onKeyPress={handleKeyPress}
             />
             <button type="button" onClick={handleAddKeyword}>
               Suchbegriff hinzufügen
@@ -97,20 +112,28 @@ function App() {
 
         <button type="submit">Jobs finden</button>
       </form>
-
-      <div className="results">
-        <h2>Gefundene Jobs:</h2>
-        {jobs.length === 0 ? (
-          <p>Keine Ergebnisse gefunden.</p>
-        ) : (
-          <ul>
-            {jobs.map((job, index) => (
-              <li key={index}><strong>{job.title}</strong> bei {job.company} – <a href={job.link} target="_blank" rel="noopener noreferrer">Details</a>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+    
+      {isLoading ? (
+        <div className="spinner">
+          <span>.</span>
+          <span>.</span>
+          <span>.</span>
+        </div>
+      ) : (
+        <div className="results">
+          <h2>Gefundene Jobs:</h2>
+          {jobs.length === 0 ? (
+            <p>Keine Ergebnisse gefunden.</p>
+          ) : (
+            <ul>
+              {jobs.map((job, index) => (
+                <li key={index}><strong>{job.title}</strong> bei {job.company} – <a href={job.link} target="_blank" rel="noopener noreferrer">Details</a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }
