@@ -3,9 +3,9 @@ import { useState } from 'react'
 import './App.css'
 
 function App() {
-  const [keyword, setKeyword] = useState("");
-  const [region, setRegion] = useState("alle bundeslaender");
-  const [ort, setOrt] = useState("egal");
+  const [keywords, setKeywords] = useState([]);
+  const [location, setLocation] = useState("");
+  const [radius, setRadius] = useState("30");
   const [jobs, setJobs] = useState([]);
 
   const handleSubmit = (e) => {
@@ -15,7 +15,7 @@ function App() {
     fetch("http://localhost:3050/jobsuchen", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ keyword, region, ort })
+      body: JSON.stringify({ keywords, location, radius })
     })
       .then((res) => res.json())
       .then((data) => {
@@ -26,85 +26,59 @@ function App() {
       });
   };
 
+  const handleAddKeyword = () => {
+    const keywordInput = document.getElementById("keyword");
+    if (keywordInput.value.trim()) {
+      setKeywords([...keywords, keywordInput.value.trim()]);
+      keywordInput.value = ""; // Eingabefeld leeren
+    }
+  };
+
   return (
     <div className="container">
       <h1>IT ist Zukunft, IT ist alles!</h1>
 
       <form onSubmit={handleSubmit}>
+        <div className="keyword-section">
+          <input
+            type="text"
+            id="keyword"
+            placeholder="Neuen Suchbegriff eingeben"
+            />
+            <button type="button" onClick={handleAddKeyword}>
+              Suchbegriff hinzufügen
+            </button>
+            <ul>
+              {keywords.map((kw, index) => (
+                <li key={index}>{kw}</li>
+              ))}
+            </ul>
+        </div>
+
         <input
           type="text"
-          id="keyword"
-          name="keyword"
-          placeholder="Dein Lieblingsberuf"
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
+          id="location"
+          placeholder="Standort eingeben"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
           required
         />
 
         <select
-          name="region"
-          id="region"
-          value={region}
-          onChange={(e) => setRegion(e.target.value)}
+          name="radius"
+          id="radius"
+          value={radius}
+          onChange={(e) => setRadius(e.target.value)}
         >
-          <option value="alle bundeslaender">Alle Bundesländer</option>
-          <option value="baden-wuerttemberg">Baden-Württemberg</option>
-          <option value="bayern">Bayern</option>
-          <option value="berlin">Berlin</option>
-          <option value="brandenburg">Brandenburg</option>
-          <option value="bremen">Bremen</option>
-          <option value="hamburg">Hamburg</option>
-          <option value="hessen">Hessen</option>
-          <option value="mecklenburg-vorpommern">Mecklenburg-Vorpommern</option>
-          <option value="niedersachsen">Niedersachsen</option>
-          <option value="nordrhein-westfalen">Nordrhein-Westfalen</option>
-          <option value="rheinland-pfalz">Rheinland-Pfalz</option>
-          <option value="saarland">Saarland</option>
-          <option value="sachsen">Sachsen</option>
-          <option value="sachsen-anhalt">Sachsen-Anhalt</option>
-          <option value="schleswig-holstein">Schleswig-Holstein</option>
-          <option value="thueringen">Thüringen</option>
-          <option value="malle">Mallorca</option>
+          <option value="5">5km</option>
+          <option value="10">10km</option>
+          <option value="20">20km</option>
+          <option value="30">30km</option>
+          <option value="40">40km</option>
+          <option value="50">50km</option>
+          <option value="75">75km</option>
+          <option value="100">100km</option>
         </select>
-
-        <div className="radio-group">
-          <label>
-            <input
-              type="radio"
-              name="ort"
-              value="Buero"
-              checked={ort === "Buero"}
-              onChange={(e) => setOrt(e.target.value)}
-            /> Büro
-          </label>
-          <label>
-            <input
-              type="radio"
-              name="ort"
-              value="Remote"
-              checked={ort === "Remote"}
-              onChange={(e) => setOrt(e.target.value)}
-            /> Remote
-          </label>
-          <label>
-            <input
-              type="radio"
-              name="ort"
-              value="Hybrid"
-              checked={ort === "Hybrid"}
-              onChange={(e) => setOrt(e.target.value)}
-            /> Hybrid
-          </label>
-          <label>
-            <input
-              type="radio"
-              name="ort"
-              value="egal"
-              checked={ort === "egal"}
-              onChange={(e) => setOrt(e.target.value)}
-            /> Mir Wurscht
-          </label>
-        </div>
 
         <button type="submit">Jobs finden</button>
       </form>
@@ -116,7 +90,7 @@ function App() {
         ) : (
           <ul>
             {jobs.map((job, index) => (
-              <li key={index}>{job.title} – {job.location}</li>
+              <li key={index}>{job.title} - {job.location}</li>
             ))}
           </ul>
         )}
