@@ -40,6 +40,11 @@ function App() {
     }
   };
 
+  const handleRemoveKeyword = (index) => {
+    const updatedKeywords = keywords.filter((_, i) => i !== index);
+    setKeywords(updatedKeywords);
+  };
+
   return (
     <div className="container">
       <h1>IT ist Zukunft, IT ist alles!</h1>
@@ -54,11 +59,15 @@ function App() {
             <button type="button" onClick={handleAddKeyword}>
               Suchbegriff hinzufügen
             </button>
-            <ul>
-              {keywords.map((kw, index) => (
-                <li key={index}>{kw}</li>
-              ))}
-            </ul>
+        </div>
+
+        <div className="keyword-bubbles">
+          {keywords.map((keyword, index) => (
+            <span key={index} className='bubble'>
+              {keyword}
+              <button className='remove-button' onClick={() => handleRemoveKeyword(index)}>x</button>
+              </span>
+            ))}
         </div>
 
         <input
