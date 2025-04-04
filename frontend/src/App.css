@@ -1,3 +1,13 @@
+body {
+  background-color: #d3d3d3;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 button {
   background-color: #ececec;
   border: 1px solid #d3d3d3;
@@ -19,7 +29,6 @@ button:hover {
 input[type="text"] {
   background-color: #ececec;
   color: #000000;
-  width: 25%;
   padding: 5px 10px;
   border: 1px solid #d3d3d3;
   border-radius: 20px;
@@ -31,7 +40,6 @@ input[type="text"] {
 select {
   background-color: #ececec;
   color: #000000;
-  width: 14%;
   padding: 5px 10px;
   border: 1px solid #d3d3d3;
   border-radius: 20px;
@@ -39,11 +47,6 @@ select {
   outline: none;
   transition: border-color 0.3s ease;
   margin-left: 10px;
-}
-
-input[type="text"]:focus,
-select:focus {
-  border-color: #d3d3d3;
 }
 
 .keyword-bubbles {

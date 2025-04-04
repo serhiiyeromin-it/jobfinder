@@ -8,7 +8,7 @@ function App() {
   const [jobs, setJobs] = useState([]); // Array zum Speichern der gefundenen Jobs
   const [isLoading, setIsLoading] = useState(false); // Boolean für den Ladezustand
 
-  useEffect(() => { // 
+  useEffect(() => { // Initiale Jobs abrufen
     fetch("http://localhost:3050/jobsuchen")
       .then((res) => res.json())
       .then((data) => setJobs(data))
