@@ -10,7 +10,7 @@ function App() {
   const [jobs, setJobs] = useState([]); // Array zum Speichern der gefundenen Jobs
   const [isLoading, setIsLoading] = useState(false); // Boolean für den Ladezustand
 
-  useEffect(() => { // Initiale Jobs abrufen
+  useEffect(() => {
     fetch("http://localhost:3050/jobsuchen")
       .then((res) => res.json())
       .then((data) => setJobs(data))
@@ -61,27 +61,18 @@ function App() {
     setKeywords(updatedKeywords);
   };
 
-  const handleBookmarkChange = async (e, job) => {
+  const handleBookmarkChange = (e, job) => {
     const updatedBookmarkStatus = e.target.checked;
-    const updatedJobs = jobs.map((j) => 
+    const updatedJobs = jobs.map((j) =>
       j.link === job.link ? { ...j, bookmark: updatedBookmarkStatus } : j
     );
     setJobs(updatedJobs);
-    try {
-      const response = await fetch("http://localhost:3050/update_bookmark", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ _id: job._id, bookmark: updatedBookmarkStatus })
-      });
-      
-      const data = await response.json();
-
-      if (!data.success) {
-        console.error("Fehler beim Aktualisieren des Lesezeichens:", data.message);
-      }
-    } catch (error) {
-      console.error("Fehler beim Senden des Lesezeichen-Updates:", error);
-    }
+  
+    fetch("http://localhost:3050/update_bookmark", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ _id: job._id, bookmark: updatedBookmarkStatus })
+    });
   };
 
   return (
@@ -155,7 +146,8 @@ function App() {
                 <li key={index}><strong>{job.title}</strong> bei {job.company} – <a href={job.link} target="_blank" rel="noopener noreferrer">Details</a>
                 <label>
                   <input 
-                    type="checkbox" 
+                    type="checkbox"
+                    checked={job.bookmark}
                     onChange={(e) => handleBookmarkChange(e, job)} 
                   />
                   {job.bookmark ? "Entfernen" : "Job speichern"}

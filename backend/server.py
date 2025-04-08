@@ -25,7 +25,9 @@ def jobsuchen():
         collection.delete_many({"bookmark": False}) # Löscht alle alten Jobs in der Datenbank, um Platz für neue zu schaffen
         print("Alle alten Jobs in der Datenbank gelöscht.")
 
-        bookmarked_jobs = list(collection.find({"bookmark": True})) 
+        bookmarked_jobs = [ # Hier werden alle Jobs aus der Datenbank abgerufen, die als Bookmarks gespeichert sind
+            {**job, '_id': str(job['_id'])} for job in collection.find({"bookmark": True})
+        ] 
 
         unique_jobs = []
         for new_job in new_jobs: 
@@ -40,11 +42,13 @@ def jobsuchen():
                 unique_jobs.append(new_job)
 
         print(f"{len(unique_jobs)} Jobs in MongoDB gespeichert.")
-        return jsonify(unique_jobs + bookmarked_jobs) # Gibt die Jobs als JSON zurück
+        return jsonify(bookmarked_jobs + unique_jobs) # Gibt die Jobs als JSON zurück
     
     elif request.method == 'GET':
 
-        jobs = list(collection.find({}, {'title': 1, 'company': 1, 'link': 1, 'bookmark': 1})) # Hier werden alle Jobs aus der Datenbank abgerufen
+        jobs = [ # Hier werden alle Jobs aus der Datenbank abgerufen
+            {**job, '_id': str(job['_id'])} for job in collection.find({}, {'title': 1, 'company': 1, 'link': 1, 'bookmark': 1})
+        ]
         print(f"{len(jobs)} Jobs aus MongoDB abgerufen.")
         return jsonify(jobs) # Gibt die Jobs als JSON zurück
 
