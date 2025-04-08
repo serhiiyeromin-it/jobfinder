@@ -18,6 +18,7 @@ job_data = {
     "title": "Python Developer",
     "company": "Example Company",
     "link": "https://example.com/job/python-developer",
+    "bookmark": False
 }
 
 # Einfügen eines Dokuments
