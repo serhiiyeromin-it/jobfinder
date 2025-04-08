@@ -16,24 +16,67 @@ def jobsuchen():
         radius = int(data.get('radius', '30')) # Holt den Radius aus den Daten, Standard ist 30 (in km)
 
         print("Scraping gestartet mit:", keywords, location, radius) 
-        jobs = crawl_stepstone(keywords, location, radius) # Hier wird die Funktion zum Scrapen aufgerufen und die Jobs werden in der Variable jobs gespeichert
+        new_jobs = crawl_stepstone(keywords, location, radius) # Hier wird die Funktion zum Scrapen aufgerufen und die Jobs werden in der Variable jobs gespeichert
 
-        collection.delete_many({}) # Löscht alle alten Jobs in der Datenbank, um Platz für neue zu schaffen
+        for job in new_jobs:
+            job['bookmark'] = False
+
+        collection.delete_many({"bookmark": False}) # Löscht alle alten Jobs in der Datenbank, um Platz für neue zu schaffen
         print("Alle alten Jobs in der Datenbank gelöscht.")
-        
-        for job in jobs: 
 
-            result = collection.insert_one(job) # Hier wird jeder Job in die Datenbank eingefügt
-            job['_id'] = str(result.inserted_id) # Hier wird die ID des eingefügten Jobs in das Job-Dictionary eingefügt
+        bookmarked_jobs = list(collection.find({"bookmark": True})) 
 
-        print(f"{len(jobs)} Jobs in MongoDB gespeichert.")
-        return jsonify(jobs) # Gibt die Jobs als JSON zurück
+        unique_jobs = []
+        for new_job in new_jobs: 
+            if not any(
+                bookmarked_job['title'] == new_job['title'] and
+                bookmarked_job['company'] == new_job['company'] and
+                bookmarked_job['link'] == new_job['link']
+                for bookmarked_job in bookmarked_jobs
+            ):
+                result = collection.insert_one(new_job) # Hier wird jeder Job in die Datenbank eingefügt
+                new_job['_id'] = str(result.inserted_id) # Hier wird die ID des eingefügten Jobs in das Job-Dictionary eingefügt
+                unique_jobs.append(new_job)
+
+        print(f"{len(unique_jobs)} Jobs in MongoDB gespeichert.")
+        return jsonify(unique_jobs + bookmarked_jobs) # Gibt die Jobs als JSON zurück
     
     elif request.method == 'GET':
 
-        jobs = list(collection.find({}, {'title': 1, 'company': 1, 'link': 1})) # Hier werden alle Jobs aus der Datenbank abgerufen
+        jobs = list(collection.find({}, {'title': 1, 'company': 1, 'link': 1, 'bookmark': 1})) # Hier werden alle Jobs aus der Datenbank abgerufen
         print(f"{len(jobs)} Jobs aus MongoDB abgerufen.")
         return jsonify(jobs) # Gibt die Jobs als JSON zurück
+
+app.route('/update_bookmark', methods=['POST'])
+def update_bookmark():
+    data = request.json
+    job_id = data.get('_id')
+    bookmark_status = data.get('bookmark')
+
+    if not job_id or bookmark_status is None:
+        return jsonify({'error': 'Ungültige Anfrage'}), 400
+
+    try:
+        result = collection.update_one(
+            {'_id': pymongo.ObjectID(job_id)},
+            {'$set': {'bookmark': bookmark_status}}
+        )
+
+        if result.modified_count > 0:
+            return jsonify({'success': True, "message": "Bookmark erfolgreich aktualisiert"}), 200
+        else:
+            return jsonify({'success': False, "message": "Bookmark nicht aktualisiert"}), 404
+    
+    except Exception as e:
+        print(f"Fehler beim Aktualisieren des Bookmarks: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/bookmarked_jobs', methods=['GET'])
+def get_bookmarked_jobs():
+    jobs = list(collection.find({"bookmark": True}, {'title': 1, 'company': 1, 'link': 1, 'bookmark': 1}))
+    print(f"{len(jobs)} bookmarked Jobs aus MongoDB abgerufen.")
+    return jsonify(jobs)
+
 
 if __name__ == '__main__': # Startet die Flask-App
     app.run(host='0.0.0.0', port=3050) # Startet die App auf dem Host
