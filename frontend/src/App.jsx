@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import BookmarkManager from './BookmarkManager';
 import './App.css'
 
 
@@ -60,6 +59,29 @@ function App() {
   const handleRemoveKeyword = (index) => {
     const updatedKeywords = keywords.filter((_, i) => i !== index);
     setKeywords(updatedKeywords);
+  };
+
+  const handleBookmarkChange = async (e, job) => {
+    const updatedBookmarkStatus = e.target.checked;
+    const updatedJobs = jobs.map((j) => 
+      j.link === job.link ? { ...j, bookmark: updatedBookmarkStatus } : j
+    );
+    setJobs(updatedJobs);
+    try {
+      const response = await fetch("http://localhost:3050/update_bookmark", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ _id: job._id, bookmark: updatedBookmarkStatus })
+      });
+      
+      const data = await response.json();
+
+      if (!data.success) {
+        console.error("Fehler beim Aktualisieren des Lesezeichens:", data.message);
+      }
+    } catch (error) {
+      console.error("Fehler beim Senden des Lesezeichen-Updates:", error);
+    }
   };
 
   return (
@@ -131,7 +153,13 @@ function App() {
             <ul>
               {jobs.map((job, index) => (
                 <li key={index}><strong>{job.title}</strong> bei {job.company} – <a href={job.link} target="_blank" rel="noopener noreferrer">Details</a>
-                <BookmarkManager jobs={[job]} /> 
+                <label>
+                  <input 
+                    type="checkbox" 
+                    onChange={(e) => handleBookmarkChange(e, job)} 
+                  />
+                  {job.bookmark ? "Entfernen" : "Job speichern"}
+                </label>
                 </li>
               ))}
             </ul>

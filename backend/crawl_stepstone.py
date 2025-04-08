@@ -7,35 +7,15 @@ def crawl_stepstone(keywords, location, radius):
 
     formatted_keywords_a = ',%20'.join(keywords)
     formatted_keywords_b = '_'.join(keywords).lower()
-
-    query_params = f"radius={radius}&sort=2&action=sort_publish&q={formatted_keywords_a}&searchOrigin=Resultlist_top-search" # Hier werden die Parameter für die URL definiert
-    base_url = f"https://www.stepstone.de/jobs/{formatted_keywords_b}/in-{location}?" # Hier wird die Basis-URL definiert
-    # search_url = f"{base_url}{query_params}&page=1"
     headers = { # Hier werden die Header für die Anfrage definiert
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
     }
-    # response = requests.get(search_url, headers=headers, timeout=10)
-
-    # if response.status_code == 200:
-
-    #     soup = BeautifulSoup(response.content, 'html.parser')
-
-        # pagination_list = soup.find('ul', class_='res-f7vubm')
-        # if pagination_list:
-        #     pages = pagination_list.find_all('li')
-        #     last_page_element = pages[-2]
-        #     last_page_span = last_page_element.find('span', {'aria-hidden': 'true'})
-        #     last_page = int(last_page_span.text.strip()) if last_page_span else 1
-        #     print(f"Gesamtanzahl der Seiten: {last_page}")
-        # else:
-        #     last_page = 1 
-        #     print("Keine Pagination gefunden, es wird nur eine Seite gecrawlt.")
 
     all_jobs = [] # Hier wird eine leere Liste für alle Jobs erstellt
 
     for page in range(1, 7):
 
-        search_url = f"{base_url}radius={radius}&page={page}&q=JIRA%2c+Python%2c+JavaScript&searchOrigin=Resultlist_top-search" # Hier wird die URL für die jeweilige Seite erstellt
+        search_url = f"https://www.stepstone.de/jobs/{formatted_keywords_b}/in-{location}?radius={radius}&page={page}&sort=2&action=sort_publish&q={formatted_keywords_a}&searchOrigin=Resultlist_top-search" # Hier wird die URL für die jeweilige Seite erstellt
 
         try:
             response = requests.get(search_url, headers=headers, timeout=10) # Hier wird die Anfrage an die URL gesendet

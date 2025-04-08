@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from crawl_stepstone import crawl_stepstone
 from mongodb_connect import collection
+from bson.objectid import ObjectId
 
 app = Flask(__name__) # Erstellt eine Flask-Instanz, damit wir die Flask-Funktionen nutzen können
 CORS(app) # Erlaubt Cross-Origin-Requests, das sind Anfragen von einer anderen Domain
@@ -47,7 +48,7 @@ def jobsuchen():
         print(f"{len(jobs)} Jobs aus MongoDB abgerufen.")
         return jsonify(jobs) # Gibt die Jobs als JSON zurück
 
-app.route('/update_bookmark', methods=['POST'])
+@app.route('/update_bookmark', methods=['POST'])
 def update_bookmark():
     data = request.json
     job_id = data.get('_id')
@@ -58,7 +59,7 @@ def update_bookmark():
 
     try:
         result = collection.update_one(
-            {'_id': pymongo.ObjectID(job_id)},
+            {'_id': ObjectId(job_id)},
             {'$set': {'bookmark': bookmark_status}}
         )
 

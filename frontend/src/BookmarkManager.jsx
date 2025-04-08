@@ -37,15 +37,15 @@ function BookmarkManager() {
     }
   };
 
-  // Zeigt nur die gespeicherten Jobs an
-  const handleShowBookmarks = () => {
-    setJobsToDisplay(bookmarkedJobs); // Nur gespeicherte Jobs anzeigen
-  };
+  // // Zeigt nur die gespeicherten Jobs an
+  // const handleShowBookmarks = () => {
+  //   setJobsToDisplay(bookmarkedJobs); // Nur gespeicherte Jobs anzeigen
+  // };
 
-  // Zeigt alle Jobs an
-  const handleShowAllJobs = () => {
-    setJobsToDisplay(allJobs); // Alle Jobs anzeigen
-  };
+  // // Zeigt alle Jobs an
+  // const handleShowAllJobs = () => {
+  //   setJobsToDisplay(allJobs); // Alle Jobs anzeigen
+  // };
 
   // Überprüft, ob ein Job bereits gespeichert wurde
   const isBookmarked = (job) => {
@@ -54,39 +54,16 @@ function BookmarkManager() {
 
   return (
     <div className="main-container">
-      {/* Einmalige Buttons für die Anzeige der Jobs, über der Job-Liste */}
-      <div className="button-container" style={{ marginBottom: '20px' }}>
-        <button onClick={handleShowAllJobs}>Zeige alle Jobs</button>
-        <button onClick={handleShowBookmarks}>Zeige gespeicherte Jobs</button>
-      </div>
-
       {/* Anzeige der Jobs */}
       <div className="results">
-        <h2>Gefundene Jobs:</h2>
-
-        {jobsToDisplay.length === 0 ? (
-          <p>Keine Ergebnisse gefunden.</p>
-        ) : (
-          <ul>
-            {jobsToDisplay.map((job, index) => (
-              <li key={index}>
-                <strong>{job.title}</strong> bei {job.company} –{' '}
-                <a href={job.link} target="_blank" rel="noopener noreferrer">
-                  Details
-                </a>
-                {/* Checkbox für das Speichern/Entfernen des Jobs */}
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={isBookmarked(job)}
-                    onChange={() => handleBookmark(job)}
-                  />
-                  {isBookmarked(job) ? ' Entfernen' : ' Job speichern'}
-                </label>
-              </li>
-            ))}
-          </ul>
-        )}
+        <label>
+          <input
+            type="checkbox"
+            checked={isBookmarked(job)}
+            onChange={() => handleBookmark(job)}
+          />
+          {isBookmarked(job) ? ' Entfernen' : ' Job speichern'}
+        </label>
       </div>
     </div>
   );
