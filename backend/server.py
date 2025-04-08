@@ -58,23 +58,11 @@ def update_bookmark():
     job_id = data.get('_id')
     bookmark_status = data.get('bookmark')
 
-    if not job_id or bookmark_status is None:
-        return jsonify({'error': 'Ungültige Anfrage'}), 400
-
-    try:
-        result = collection.update_one(
-            {'_id': ObjectId(job_id)},
-            {'$set': {'bookmark': bookmark_status}}
-        )
-
-        if result.modified_count > 0:
-            return jsonify({'success': True, "message": "Bookmark erfolgreich aktualisiert"}), 200
-        else:
-            return jsonify({'success': False, "message": "Bookmark nicht aktualisiert"}), 404
-    
-    except Exception as e:
-        print(f"Fehler beim Aktualisieren des Bookmarks: {e}")
-        return jsonify({'error': str(e)}), 500
+    collection.update_one(
+        {'_id': ObjectId(job_id)},
+        {'$set': {'bookmark': bookmark_status}}
+    )
+    return jsonify({'success': True})
 
 @app.route('/bookmarked_jobs', methods=['GET'])
 def get_bookmarked_jobs():
