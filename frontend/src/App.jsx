@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react'
+import BookmarkManager from './BookmarkManager';
 import './App.css'
+
+
 
 function App() {
   const [keywords, setKeywords] = useState([]); // Array zum Speichern der Suchbegriffe
@@ -128,6 +131,7 @@ function App() {
             <ul>
               {jobs.map((job, index) => (
                 <li key={index}><strong>{job.title}</strong> bei {job.company} – <a href={job.link} target="_blank" rel="noopener noreferrer">Details</a>
+                <BookmarkManager jobs={[job]} /> 
                 </li>
               ))}
             </ul>
