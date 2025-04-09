@@ -42,12 +42,13 @@ def jobsuchen():
                 unique_jobs.append(new_job)
 
         print(f"{len(unique_jobs)} Jobs in MongoDB gespeichert.")
-        return jsonify(bookmarked_jobs + unique_jobs) # Gibt die Jobs als JSON zurück
+        return jsonify(unique_jobs) # Gibt die Jobs als JSON zurück
     
     elif request.method == 'GET':
 
         jobs = [ # Hier werden alle Jobs aus der Datenbank abgerufen
-            {**job, '_id': str(job['_id'])} for job in collection.find({}, {'title': 1, 'company': 1, 'link': 1, 'bookmark': 1})
+            {**job, '_id': str(job['_id'])} 
+            for job in collection.find({"bookmark": False}, {'title': 1, 'company': 1, 'link': 1, 'bookmark': 1})
         ]
         print(f"{len(jobs)} Jobs aus MongoDB abgerufen.")
         return jsonify(jobs) # Gibt die Jobs als JSON zurück
@@ -67,6 +68,8 @@ def update_bookmark():
 @app.route('/bookmarked_jobs', methods=['GET'])
 def get_bookmarked_jobs():
     jobs = list(collection.find({"bookmark": True}, {'title': 1, 'company': 1, 'link': 1, 'bookmark': 1}))
+    for job in jobs:
+        job['_id'] = str(job['_id'])
     print(f"{len(jobs)} bookmarked Jobs aus MongoDB abgerufen.")
     return jsonify(jobs)
 
