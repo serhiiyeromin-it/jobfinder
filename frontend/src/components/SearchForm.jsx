@@ -131,7 +131,7 @@ function SearchForm({ onSearch, jobs, handleBookmarkChange }) {
                     <input
                       type="checkbox"
                       checked={job.bookmark}
-                      onChange={() => handleBookmarkChange(job)}
+                      onChange={(e) => handleBookmarkChange(e, job)}
                     />
                     {job.bookmark ? "Entfernen" : "Speichern"}
                   </label>
