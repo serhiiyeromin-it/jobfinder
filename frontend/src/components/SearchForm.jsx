@@ -97,13 +97,16 @@ function SearchForm({ onSearch, jobs, handleBookmarkChange }) {
         </select>
 
         <button type="submit">Jobs finden</button>
+        <button type="button">
+          Suchauftrag speichern
+        </button>
       </form>
 
       <div>
         <button type="button" onClick={() => navigate("/bookmarked")}>
           Gespeicherte Lesezeichen
         </button>
-        <button type="button">
+        <button type="button" onClick={() => navigate("/search-alerts")}>
           Gespeicherte Suchaufträge
         </button>
       </div>
