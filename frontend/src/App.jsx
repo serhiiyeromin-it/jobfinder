@@ -4,6 +4,7 @@ import './App.css';
 import BookmarkedJobs from "./components/BookmarkedJobs";
 import SearchForm from "./components/SearchForm";
 import SearchAlerts from "./components/SearchAlerts";
+import SearchResults from "./components/SearchResults";
 
 function App() {
   const [jobs, setJobs] = useState([]); // Array zum Speichern der gefundenen Jobs
@@ -40,8 +41,15 @@ function App() {
     fetch("http://localhost:3050/update_bookmark", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ _id: job._id, bookmark: updatedBookmarkStatus })
-    });
+      body: JSON.stringify({ _id: job._id, bookmark: updatedBookmarkStatus }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.success) {
+          console.error("Fehler beim Aktualisieren des Lesezeichens:", data.message);
+        }
+      })
+      .catch((err) => console.error("Fehler beim Aktualisieren des Lesezeichens:", err));
   };
 
   return (
@@ -59,7 +67,8 @@ function App() {
             }
           />
           <Route path="/bookmarked" element={<BookmarkedJobs />} />
-          <Route path="/search-alerts" element={<SearchAlerts />} />
+          <Route path="/search_alerts" element={<SearchAlerts />} />
+          <Route path="/search_results/:alertId" element={<SearchResults />} />
         </Routes>
       </div>
     </Router>

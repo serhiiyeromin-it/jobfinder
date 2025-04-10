@@ -11,17 +11,11 @@ client = MongoClient(uri)
 # Zugriff auf die Datenbank
 db = client['job_database']  # 'job_database' ist der Name der Datenbank, die du erstellen möchtest.
 
+# Zugriff auf die Sammlung (Collection)
+collection = db['jobs']
 
-# Beispiel: Zugriff auf eine Collection und Einfügen eines Dokuments
-collection = db['jobs']  # Beispiel: Collection namens 'jobs'
-job_data = {
-    "title": "Example Job",
-    "company": "Example Company",
-    "link": "https://example.com/job/python-developer",
-    "bookmark": False
-}
+# Zugriff auf die Sammlung für Suchaufträge
+search_alerts_collection = db['search_alerts']
 
-# Einfügen eines Dokuments
-collection.insert_one(job_data)
-
-print("Dokument erfolgreich eingefügt!")
+# Zugriff auf die Sammlung für Suchergebnisse
+search_results_collection = db['search_results']

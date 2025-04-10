@@ -118,7 +118,7 @@ function SearchForm({ onSearch, jobs, handleBookmarkChange }) {
         </select>
 
         <button type="submit">Jobs finden</button>
-        <input type="email" placeholder="Email-Adresse eingeben" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <input type="email" placeholder="Email-Adresse eingeben" value={email} onChange={(e) => setEmail(e.target.value)} />
         <button type="button" onClick={handleSaveSearch} disabled={!email.trim()}>
           Suchauftrag speichern
         </button>
@@ -128,7 +128,7 @@ function SearchForm({ onSearch, jobs, handleBookmarkChange }) {
         <button type="button" onClick={() => navigate("/bookmarked")}>
           Gespeicherte Lesezeichen
         </button>
-        <button type="button" onClick={() => navigate("/search-alerts")}>
+        <button type="button" onClick={() => navigate("/search_alerts")}>
           Gespeicherte Suchaufträge
         </button>
       </div>

@@ -28,6 +28,10 @@ function SearchAlerts() {
             .catch((err) => console.error("Fehler beim Löschen des Suchauftrags:", err));
     };
 
+    const handleViewResults = (alertId) => {
+        navigate(`/search_results/${alertId}`);
+    };
+
     return (
         <div className="container">
             <h2>Gespeicherte Suchaufträge</h2>
@@ -37,7 +41,7 @@ function SearchAlerts() {
             ) : (
                 <div className="alerts-container">
                     {searchAlerts.map((alert) => (
-                        <div key={alert._id} className="alert-bubble">
+                        <div key={alert._id} className="alert-bubble" onClick={() => handleViewResults(alert._id)}>
                             <p><strong>Keywords:</strong> {alert.keywords.join(", ")}</p>
                             <p><strong>Location:</strong> {alert.location}</p>
                             <p><strong>Radius:</strong> {alert.radius} km</p>

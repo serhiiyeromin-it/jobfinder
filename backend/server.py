@@ -1,8 +1,10 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from crawl_stepstone import crawl_stepstone
-from mongodb_connect import collection
+from mongodb_connect import collection, search_alerts_collection, search_results_collection
 from bson.objectid import ObjectId
+from apscheduler.schedulers.background import BackgroundScheduler
+import datetime
 
 app = Flask(__name__) # Erstellt eine Flask-Instanz, damit wir die Flask-Funktionen nutzen können
 CORS(app) # Erlaubt Cross-Origin-Requests, das sind Anfragen von einer anderen Domain
@@ -73,6 +75,74 @@ def get_bookmarked_jobs():
     print(f"{len(jobs)} bookmarked Jobs aus MongoDB abgerufen.")
     return jsonify(jobs)
 
+@app.route('/save_search', methods=['POST'])
+def save_search():
+    data = request.json
+    keywords = data.get('keywords', [])
+    location = data.get('location', '')
+    radius = int(data.get('radius', '30'))
+    email = data.get('email', '')
+
+    search_alerts_data = {
+        "keywords": keywords,
+        "location": location,
+        "radius": radius,
+        "email": email
+    }
+    result = search_alerts_collection.insert_one(search_alerts_data)
+    search_alerts_data['_id'] = str(result.inserted_id)
+    return jsonify({'success': True, 'search_alert': search_alerts_data})
+
+@app.route('/search_alerts', methods=['GET'])
+def get_search_alerts():
+    search_alerts = list(search_alerts_collection.find({}, {'keywords': 1, 'location': 1, 'radius': 1, 'email': 1}))
+    for alert in search_alerts:
+        alert['_id'] = str(alert['_id'])
+    
+    return jsonify(search_alerts)
+
+@app.route('/delete_search_alert/<string:id>', methods=['DELETE'])
+def delete_search_alert(id):
+    result = search_alerts_collection.delete_one({'_id': ObjectId(id)})
+    if result.deleted_count == 1:
+        return jsonify({'success': True})
+    else:
+        return jsonify({'error': 'Suchauftrag nicht gefunden'}), 404
+
+scheduler = BackgroundScheduler()
+
+def execute_search_alerts():
+    alerts = list(search_alerts_collection.find())
+    print(f"[{datetime.datetime.now()}] Ausführung der gespeicherten Suchaufträge gestartet.")
+
+    for alert in alerts:
+        keywords = alert.get('keywords', [])
+        location = alert.get('location', '')
+        radius = int(alert.get('radius', '30'))
+        email = alert.get('email', '')
+
+        new_jobs = crawl_stepstone(keywords, location, radius)
+
+        for job in new_jobs:
+            job['search_alert_id'] = str(alert['_id'])
+            job['timestamp'] = datetime.datetime.now()
+
+        existing_links = [job['link'] for job in search_results_collection.find()]
+        unique_jobs = [job for job in new_jobs if job['link'] not in existing_links]
+
+        if unique_jobs:
+            search_results_collection.insert_many(unique_jobs)
+            print(f"{len(unique_jobs)} neue Ergebnisse für Suchauftrag {alert['_id']} gespeichert.")
+
+scheduler.add_job(execute_search_alerts, 'interval', hours=8) 
+scheduler.start()
+
+@app.route('/get_search_results/<string:alert_id>', methods=['GET'])
+def get_search_results(alert_id):
+    results = list(search_results_collection.find({"search_alert_id": alert_id}))
+    for result in results:
+        result['_id'] = str(result['_id'])
+    return jsonify(results)
 
 if __name__ == '__main__': # Startet die Flask-App
     app.run(host='0.0.0.0', port=3050) # Startet die App auf dem Host
