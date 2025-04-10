@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import './App.css';
 import BookmarkedJobs from "./components/BookmarkedJobs";
 import SearchForm from "./components/SearchForm";
+import SearchAlerts from "./components/SearchAlerts";
 
 function App() {
   const [jobs, setJobs] = useState([]); // Array zum Speichern der gefundenen Jobs
@@ -58,6 +59,7 @@ function App() {
             }
           />
           <Route path="/bookmarked" element={<BookmarkedJobs />} />
+          <Route path="/search-alerts" element={<SearchAlerts />} />
         </Routes>
       </div>
     </Router>

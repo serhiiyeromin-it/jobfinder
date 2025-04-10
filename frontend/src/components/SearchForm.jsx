@@ -5,6 +5,7 @@ function SearchForm({ onSearch, jobs, handleBookmarkChange }) {
     const [keywords, setKeywords] = useState([]);
     const [location, setLocation] = useState("");
     const [radius, setRadius] = useState("30");
+    const [email, setEmail] = useState("");
     const [isLoading, setIsLoading] = useState(false); // Boolean für den Ladezustand
     const navigate = useNavigate();
 
@@ -38,6 +39,26 @@ function SearchForm({ onSearch, jobs, handleBookmarkChange }) {
     onSearch({ keywords, location, radius }).then(() => {
         setIsLoading(false);
     });
+  };
+
+  const handleSaveSearch = () => {
+    if (!email.trim()) {
+      alert("Bitte geben Sie eine E-Mail-Adresse ein, um den Suchauftrag zu speichern.");
+      return;
+    }
+
+    fetch("http://localhost:3050/save_search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ keywords, location, radius, email }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        console.log("Suchauftrag gespeichert:", data);
+      })
+      .catch((err) => {
+        console.error("Fehler beim Speichern des Suchauftrags:", err);
+      });
   };
 
   return (
@@ -97,7 +118,8 @@ function SearchForm({ onSearch, jobs, handleBookmarkChange }) {
         </select>
 
         <button type="submit">Jobs finden</button>
-        <button type="button">
+        <input type="email" placeholder="Email-Adresse eingeben" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <button type="button" onClick={handleSaveSearch} disabled={!email.trim()}>
           Suchauftrag speichern
         </button>
       </form>
