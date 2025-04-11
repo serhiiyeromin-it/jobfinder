@@ -4,3 +4,5 @@ requests
 bs4
 pymongo
 apscheduler
+Flask-Mail
+python-dotenv

@@ -1,13 +1,28 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask_mail import Mail
+import os
+from dotenv import load_dotenv
 from crawl_stepstone import crawl_stepstone
 from mongodb_connect import collection, search_alerts_collection, search_results_collection
 from bson.objectid import ObjectId
 from apscheduler.schedulers.background import BackgroundScheduler
 import datetime
 
+load_dotenv() # Lädt die Umgebungsvariablen aus der .env-Datei
 app = Flask(__name__) # Erstellt eine Flask-Instanz, damit wir die Flask-Funktionen nutzen können
 CORS(app) # Erlaubt Cross-Origin-Requests, das sind Anfragen von einer anderen Domain
+
+
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
+app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT'))
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
+
+# Flask-Mail initialisieren
+mail = Mail(app)
 
 @app.route('/jobsuchen', methods=['GET', 'POST']) # Definiert die Route und die erlaubten Methoden
 def jobsuchen():
