@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from flask_mail import Mail
+from flask_mail import Mail, Message
 import os
 from dotenv import load_dotenv
 from crawl_stepstone import crawl_stepstone
@@ -19,10 +19,19 @@ app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT'))
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_USERNAME')
 
 # Flask-Mail initialisieren
 mail = Mail(app)
+
+def send_email(to_email, subject, body):
+    try:
+        msg = Message(subject, recipients=[to_email], body=body)
+        mail.send(msg)
+        print(f"Email erfolgreich gesendet an {to_email}.")
+    except Exception as e:
+        print(f"Fehler beim Senden der Email: {e}")
+        
 
 @app.route('/jobsuchen', methods=['GET', 'POST']) # Definiert die Route und die erlaubten Methoden
 def jobsuchen():
@@ -126,30 +135,40 @@ def delete_search_alert(id):
 
 scheduler = BackgroundScheduler()
 
-def execute_search_alerts():
-    alerts = list(search_alerts_collection.find())
-    print(f"[{datetime.datetime.now()}] Ausführung der gespeicherten Suchaufträge gestartet.")
+def execute_search_alerts(): # Diese Funktion wird alle 8 Stunden ausgeführt, um die gespeicherten Suchaufträge auszuführen
+    with app.app_context(): # Stellt den Kontext für die Flask-App bereit, damit wir auf die Datenbank zugreifen können
 
-    for alert in alerts:
-        keywords = alert.get('keywords', [])
-        location = alert.get('location', '')
-        radius = int(alert.get('radius', '30'))
-        email = alert.get('email', '')
+        alerts = list(search_alerts_collection.find())
+        print(f"[{datetime.datetime.now()}] Ausführung der gespeicherten Suchaufträge gestartet.")
 
-        new_jobs = crawl_stepstone(keywords, location, radius)
+        for alert in alerts:
+            keywords = alert.get('keywords', [])
+            location = alert.get('location', '')
+            radius = int(alert.get('radius', '30'))
+            email = alert.get('email', '')
 
-        for job in new_jobs:
-            job['search_alert_id'] = str(alert['_id'])
-            job['timestamp'] = datetime.datetime.now()
+            new_jobs = crawl_stepstone(keywords, location, radius)
 
-        existing_links = [job['link'] for job in search_results_collection.find()]
-        unique_jobs = [job for job in new_jobs if job['link'] not in existing_links]
+            for job in new_jobs:
+                job['search_alert_id'] = str(alert['_id'])
+                job['timestamp'] = datetime.datetime.now()
 
-        if unique_jobs:
-            search_results_collection.insert_many(unique_jobs)
-            print(f"{len(unique_jobs)} neue Ergebnisse für Suchauftrag {alert['_id']} gespeichert.")
+            existing_links = [job['link'] for job in search_results_collection.find()]
+            unique_jobs = [job for job in new_jobs if job['link'] not in existing_links]
 
-scheduler.add_job(execute_search_alerts, 'interval', hours=8) 
+            if unique_jobs:
+                search_results_collection.insert_many(unique_jobs)
+                print(f"{len(unique_jobs)} neue Ergebnisse für Suchauftrag {alert['_id']} gespeichert.")
+
+                if email:
+
+                    subject = f"Neue Jobs für deinen Suchauftrag: {keywords}"
+                    body = f"Es wurden {len(unique_jobs)} neue Stellen gefunden:\n\n"
+                    for job in unique_jobs:
+                        body += f"- {job['title']} bei {job['company']} ({job['link']})\n"
+                    send_email(email, subject, body)
+
+scheduler.add_job(execute_search_alerts, 'interval', hours=8) # Führt die Funktion alle 8 Stunden aus
 scheduler.start()
 
 @app.route('/get_search_results/<string:alert_id>', methods=['GET'])
