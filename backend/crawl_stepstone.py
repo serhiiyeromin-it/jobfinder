@@ -5,7 +5,7 @@ from requests.exceptions import ReadTimeout
 
 def crawl_stepstone(keywords, location, radius):
 
-    formatted_keywords_a = ',%20'.join(keywords)
+    formatted_keywords_a = '%2c+'.join(keywords)
     formatted_keywords_b = '_'.join(keywords).lower()
     headers = { # Hier werden die Header für die Anfrage definiert
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
