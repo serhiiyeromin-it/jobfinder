@@ -8,6 +8,7 @@ from mongodb_connect import collection, search_alerts_collection, search_results
 from bson.objectid import ObjectId
 from apscheduler.schedulers.background import BackgroundScheduler
 import datetime
+from crawler_api_baa import crawl_arbeitsagentur
 
 load_dotenv() # Lädt die Umgebungsvariablen aus der .env-Datei
 app = Flask(__name__) # Erstellt eine Flask-Instanz, damit wir die Flask-Funktionen nutzen können
@@ -43,7 +44,10 @@ def jobsuchen():
         radius = int(data.get('radius', '30')) # Holt den Radius aus den Daten, Standard ist 30 (in km)
 
         print("Scraping gestartet mit:", keywords, location, radius) 
-        new_jobs = crawl_stepstone(keywords, location, radius) # Hier wird die Funktion zum Scrapen aufgerufen und die Jobs werden in der Variable jobs gespeichert
+        new_jobs_stepstone = []
+        new_jobs_arbeitsagentur = crawl_arbeitsagentur(keywords, location, radius)
+        new_jobs = new_jobs_stepstone + new_jobs_arbeitsagentur
+
 
         for job in new_jobs:
             job['bookmark'] = False
@@ -78,6 +82,24 @@ def jobsuchen():
         ]
         print(f"{len(jobs)} Jobs aus MongoDB abgerufen.")
         return jsonify(jobs) # Gibt die Jobs als JSON zurück
+# Diese Route durchsucht StepStone nach Jobs und gibt die Ergebnisse zurück
+
+
+@app.route('/jobsuchen_baa', methods=['POST'])
+def jobsuchen_baa():
+    if request.method == 'POST':
+        data = request.json
+        keywords = data.get('keywords', [])
+        location = data.get('location', '')
+        radius = int(data.get('radius', 30))
+
+        print(f"Starte Arbeitsagentur-Crawl mit: {keywords}, {location}, {radius}km")
+
+        new_jobs = crawl_arbeitsagentur(keywords, location, radius)
+
+        return jsonify(new_jobs)
+# Diese Route durchsucht die Arbeitsagentur-API nach Jobs und gibt die Ergebnisse zurück
+
 
 @app.route('/update_bookmark', methods=['POST'])
 def update_bookmark():
