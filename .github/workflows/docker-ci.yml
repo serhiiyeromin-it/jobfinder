@@ -35,8 +35,8 @@ jobs:
           file: ./backend/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/nightcrawler-backend:${{ github.sha }}
-            ghcr.io/${{ github.repository_owner }}/nightcrawler-backend:latest
+            ghcr.io/${{ toLower(github.repository_owner) }}/nightcrawler-backend:${{ github.sha }}
+            ghcr.io/${{ toLower(github.repository_owner) }}/nightcrawler-backend:latest
 
       # 5. Frontend-Image bauen und pushen
       - name: Build & Push Frontend Image
@@ -46,8 +46,8 @@ jobs:
           file: ./frontend/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/nightcrawler-frontend:${{ github.sha }}
-            ghcr.io/${{ github.repository_owner }}/nightcrawler-frontend:latest
+            ghcr.io/${{ toLower(github.repository_owner) }}/nightcrawler-frontend:${{ github.sha }}
+            ghcr.io/${{ toLower(github.repository_owner) }}/nightcrawler-frontend:latest
 
       # 6. (Optional) Docker-Compose-Stack lokal starten – 
       #    nur wenn ihr einen integrierten Test haben wollt
