@@ -4,7 +4,6 @@ import uuid
 from pymongo import MongoClient
 from dotenv import load_dotenv
 
-
 load_dotenv()  # .env-Datei laden
 
 # MongoDB-Verbindung herstellen
@@ -17,7 +16,6 @@ API_URL = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/jobs"
 HEADERS = {
     "X-API-Key": os.getenv("BAA_API_KEY")  # Dein persönlicher API-Schlüssel
 }
-
 
 def crawl_arbeitsagentur(keywords, location, radius, collection=collection):
     #Crawler für die Arbeitsagentur-API
@@ -69,17 +67,6 @@ def crawl_arbeitsagentur(keywords, location, radius, collection=collection):
             print("❌ Zugriff verweigert. Bitte überprüfe deinen API-Schlüssel.")
         print(f"Fehler beim Abrufen der API-Daten: {e}")
         return []  # Leere Liste bei Fehlern zurückgeben
-
-    # """Crawler für die Arbeitsagentur-API"""
-    # query = {
-    #     "was": " ".join(keywords),  # Suchbegriffe, z.B. Jobtitel
-    #     "berufsfeld": " ".join(keywords),     # Jobtitel oder Suchbegriffe
-    #     "wo": location,               # Ort
-    #     "umkreis": radius,            # Umkreis in km
-    #     "page": 1,                    # Startseite
-    #     "size": 50                    # Anzahl Jobs pro Seite
-    # }
-    # print(f"🔍 API Abfrage mit Parametern: {query}")
 
     try:
         response = requests.get(API_URL, headers=HEADERS, params=query, timeout=30)
