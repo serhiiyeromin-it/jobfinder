@@ -67,9 +67,12 @@ def jobsuchen():
                 bookmarked_job['link'] == new_job['link']
                 for bookmarked_job in bookmarked_jobs
             ):
-                result = collection.insert_one(new_job) # Hier wird jeder Job in die Datenbank eingefügt
-                new_job['_id'] = str(result.inserted_id) # Hier wird die ID des eingefügten Jobs in das Job-Dictionary eingefügt
-                unique_jobs.append(new_job)
+                if collection.count_documents({"_id": new_job.get('_id')}, limit=1) == 0: # Überprüft, ob der Job bereits in der Datenbank ist
+                    result = collection.insert_one(new_job) # Fügt den neuen Job in die Datenbank ein
+                    new_job['_id'] = str(result.inserted_id) # Hier wird die ID des eingefügten Jobs in das Job-Dictionary eingefügt
+                    unique_jobs.append(new_job) # Fügt den neuen Job der Liste der einzigartigen Jobs hinzu
+                    print(f"Neuer Job eingefügt: {new_job['title']} bei {new_job['company']}")
+                    
 
         print(f"{len(unique_jobs)} Jobs in MongoDB gespeichert.")
         return jsonify(unique_jobs) # Gibt die Jobs als JSON zurück
@@ -95,7 +98,7 @@ def jobsuchen_baa():
 
         print(f"Starte Arbeitsagentur-Crawl mit: {keywords}, {location}, {radius}km")
 
-        new_jobs = crawl_arbeitsagentur(keywords, location, radius)
+        new_jobs = crawl_arbeitsagentur(keywords, location, radius, collection)
 
         return jsonify(new_jobs)
 # Diese Route durchsucht die Arbeitsagentur-API nach Jobs und gibt die Ergebnisse zurück
