@@ -1,6 +1,7 @@
 import requests
 import os
 import uuid
+import json
 from pymongo import MongoClient
 from dotenv import load_dotenv
 
@@ -30,7 +31,7 @@ def crawl_arbeitsagentur(keywords, location, radius, collection=collection):
         "size": 50  # Anzahl der Ergebnisse pro Seite
     }
     if keywords:
-        params["was"] = " ".join(keywords)  # Suchbegriffe, z.B. Jobtitel
+        params["was"] = ",".join(keywords)  # Suchbegriffe, z.B. Jobtitel
     if location:
         params["wo"] = location  # Ort
     if radius:
@@ -44,6 +45,10 @@ def crawl_arbeitsagentur(keywords, location, radius, collection=collection):
         data = response.json()
 
         new_jobs = []
+        if not data.get("stellenangebote"):
+                print("Keine neuen Jobs gefunden.")
+                print("API response-body: {json.dumps(data, indent=2)}")
+                return []
         for job in data.get("stellenangebote", []):
             job_entry = {
                 "_id": job.get("hashId", "") or str(uuid.uuid4()),  # Eindeutige Job-ID
@@ -62,36 +67,10 @@ def crawl_arbeitsagentur(keywords, location, radius, collection=collection):
         print(f"{len(new_jobs)} Jobs in MongoDB von der Arbeitsagentur gespeichert.")
         return new_jobs
 
-    except Exception as e:  # Fehlerbehandlung
+    except Exception as e:  # Fehlerbehandlung bei der API-Anfrage
         if response.status_code == 403:
             print("❌ Zugriff verweigert. Bitte überprüfe deinen API-Schlüssel.")
         print(f"Fehler beim Abrufen der API-Daten: {e}")
         return []  # Leere Liste bei Fehlern zurückgeben
 
-    try:
-        response = requests.get(API_URL, headers=HEADERS, params=query, timeout=30)
-        response.raise_for_status()
-        data = response.json()
-
-        new_jobs = []
-        for job in data.get("stellenangebote", []):
-            job_entry = {
-                "_id": job.get("hashId", ""), # Eindeutige Job-ID
-                "title": job.get("beruf", "") or "",
-                "company": job.get("arbeitgeber", "") or "",
-                "location": job.get("arbeitsort", "") or "",
-                "link": job.get("stellenangebotURL", "") or "",
-                "source": "Arbeitsagentur"
-            }
-            
-            # In die Datenbank einfügen
-            new_jobs.append(job_entry)
-
-        print(f"{len(new_jobs)} Jobs von der Arbeitsagentur gespeichert.")
-        return new_jobs
-
-    except Exception as e: # Fehlerbehandlung
-        if response.status_code == 403:
-            print("❌ Zugriff verweigert. Bitte überprüfe deinen API-Schlüssel.")
-        print(f"Fehler beim Abrufen der API-Daten: {e}")
-        return []  # Leere Liste bei Fehlern zurückgeben
+  

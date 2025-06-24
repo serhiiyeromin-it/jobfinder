@@ -42,7 +42,7 @@ def jobsuchen():
         keywords = data.get('keywords', []) # Holt die Keywords aus den Daten, Standard ist eine leere Liste
         location = data.get('location', '') # Holt den Standort aus den Daten, Standard ist ein leerer String
         radius = int(data.get('radius', '30')) # Holt den Radius aus den Daten, Standard ist 30 (in km)
-
+  
         print("Scraping gestartet mit:", keywords, location, radius) 
         new_jobs_stepstone = []
         new_jobs_arbeitsagentur = crawl_arbeitsagentur(keywords, location, radius)
