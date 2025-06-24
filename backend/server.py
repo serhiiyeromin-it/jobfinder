@@ -123,7 +123,26 @@ def get_bookmarked_jobs():
         job['_id'] = str(job['_id'])
     print(f"{len(jobs)} bookmarked Jobs aus MongoDB abgerufen.")
     return jsonify(jobs)
+@app.route('/update_search_alert/<string:id>', methods=['POST'])
+def update_search_alert(id):
+    data = request.json
+    # Nimm die aktualisierten Daten aus dem Request
+    updated_data = {
+        "keywords": data.get('keywords', []),
+        "location": data.get('location', ''),
+        "radius": int(data.get('radius', 30)),
+        "email": data.get('email', '')
+    }
 
+    # Führe das Update in der Datenbank durch
+    result = search_alerts_collection.update_one(
+        {'_id': ObjectId(id)},
+        {'$set': updated_data}
+    )
+    if result.modified_count == 1:
+        return jsonify({'success': True, 'message': 'Suchauftrag erfolgreich aktualisiert.'})
+    else:
+        return jsonify({'success': False, 'error': 'Suchauftrag nicht gefunden oder keine Änderungen vorgenommen.'}), 404
 @app.route('/save_search', methods=['POST'])
 def save_search():
     data = request.json
