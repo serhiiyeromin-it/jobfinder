@@ -179,40 +179,82 @@ def delete_search_alert(id):
 
 scheduler = BackgroundScheduler()
 
-def execute_search_alerts(): # Diese Funktion wird alle 8 Stunden ausgeführt, um die gespeicherten Suchaufträge auszuführen
-    with app.app_context(): # Stellt den Kontext für die Flask-App bereit, damit wir auf die Datenbank zugreifen können
-
+def execute_search_alerts(): # Diese Funktion wird alle 8 Stunden ausgeführt
+    with app.app_context(): # Stellt den Kontext für die Flask-App bereit
+        
         alerts = list(search_alerts_collection.find())
-        print(f"[{datetime.datetime.now()}] Ausführung der gespeicherten Suchaufträge gestartet.")
+        print(f"[{datetime.datetime.now()}] Starte Ausführung für {len(alerts)} gespeicherte Suchaufträge.")
 
         for alert in alerts:
+            alert_id_str = str(alert['_id'])
             keywords = alert.get('keywords', [])
             location = alert.get('location', '')
             radius = int(alert.get('radius', '30'))
             email = alert.get('email', '')
 
-            new_jobs = crawl_stepstone(keywords, location, radius)
+            if not email:
+                print(f"Suchauftrag {alert_id_str} hat keine E-Mail-Adresse. Überspringe.")
+                continue
 
-            for job in new_jobs:
-                job['search_alert_id'] = str(alert['_id'])
-                job['timestamp'] = datetime.datetime.now()
+            print(f"Führe Suchauftrag aus für: {keywords} in {location} ({radius}km)")
 
-            existing_links = [job['link'] for job in search_results_collection.find()]
-            unique_jobs = [job for job in new_jobs if job['link'] not in existing_links]
+            # Crawle Jobs von BEIDEN Quellen
+            print(f"-> Crawle bei Arbeitsagentur für Suchauftrag {alert_id_str}...")
+            new_jobs_baa = crawl_arbeitsagentur(keywords, location, radius, collection)
+            
+            print(f"-> Crawle bei StepStone für Suchauftrag {alert_id_str}...")
+            new_jobs_stepstone = crawl_stepstone(keywords, location, radius)
+            
+            # Kombiniere die Ergebnisse von beiden Crawlern
+            all_new_jobs = new_jobs_baa + new_jobs_stepstone
+            print(f"-> Insgesamt {len(all_new_jobs)} Jobs von beiden Plattformen gefunden.")
 
-            if unique_jobs:
-                search_results_collection.insert_many(unique_jobs)
-                print(f"{len(unique_jobs)} neue Ergebnisse für Suchauftrag {alert['_id']} gespeichert.")
 
-                if email:
+            # --- WICHTIGE ÄNDERUNG: Effizienter und korrekter Abgleich ---
+            # 1. Hole alle Links, die für DIESEN Suchauftrag bereits gefunden wurden.
+            # Wir verwenden ein Set für eine viel schnellere Überprüfung.
+            existing_links = {
+                job['link'] for job in search_results_collection.find(
+                    {'search_alert_id': alert_id_str}, 
+                    {'link': 1}
+                )
+            }
+            
+            # 2. Filtere die neuen Jobs, um nur die wirklich neuen zu finden
+            unique_new_jobs = [job for job in all_new_jobs if job.get('link') and job['link'] not in existing_links]
 
-                    subject = f"Neue Jobs für deinen Suchauftrag: {keywords}"
-                    body = f"Es wurden {len(unique_jobs)} neue Stellen gefunden:\n\n"
-                    for job in unique_jobs:
-                        body += f"- {job['title']} bei {job['company']} ({job['link']})\n"
-                    send_email(email, subject, body)
+            # Wenn es einzigartige, neue Jobs gibt
+            if unique_new_jobs:
+                print(f"Gefunden: {len(unique_new_jobs)} wirklich neue Jobs für Suchauftrag {alert_id_str}.")
 
-scheduler.add_job(execute_search_alerts, 'interval', hours=8) # Führt die Funktion alle 8 Stunden aus
+                # Füge Metadaten zu den neuen Jobs hinzu, bevor du sie speicherst
+                for job in unique_new_jobs:
+                    job['search_alert_id'] = alert_id_str
+                    job['timestamp'] = datetime.datetime.now()
+                
+                # Speichere die neuen Ergebnisse in der Datenbank
+                search_results_collection.insert_many(unique_new_jobs)
+                
+                # --- Sende die E-Mail ---
+                subject = f"Neue Jobangebote für deine Suche: {', '.join(keywords)}"
+                
+                # Erstelle einen schönen E-Mail-Text
+                body = f"Hallo,\n\nes wurden {len(unique_new_jobs)} neue Stellen für deinen Suchauftrag gefunden:\n\n"
+                for job in unique_new_jobs:
+                    body += f"- Titel: {job.get('title', 'N/A')}\n"
+                    body += f"  Firma: {job.get('company', 'N/A')}\n"
+                    body += f"  Quelle: {job.get('source', 'N/A')}\n"
+                    body += f"  Link: {job.get('link', 'N/A')}\n\n"
+                
+                body += "Viel Erfolg bei deiner Bewerbung!\n\nDein Night-Crawler"
+
+                # Sende die E-Mail
+                send_email(email, subject, body)
+            else:
+                print(f"Keine neuen Jobs für Suchauftrag {alert_id_str} gefunden.")
+
+# Dein Scheduler-Setup (ist bereits korrekt)
+scheduler.add_job(execute_search_alerts, 'interval', hours=8)
 scheduler.start()
 
 @app.route('/get_search_results/<string:alert_id>', methods=['GET'])
