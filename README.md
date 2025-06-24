@@ -39,4 +39,4 @@ Das Projekt stützt sich auf etablierte und moderne Bibliotheken, um eine reakti
 Die Anwendung ist dann standardmäßig unter `http://localhost:5173` erreichbar.
 
 ### Zusätzliche Empfehlung für die Zukunft
-Wenn Anwendung wächst, Axios zu installieren wäre eine Option
+Wenn Anwendung wächst, Axios zu installieren wäre eine Option sien
