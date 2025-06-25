@@ -24,53 +24,62 @@ def crawl_arbeitsagentur(keywords, location, radius, collection=collection):
     if isinstance(keywords, str):
         keywords = [keywords]   # Sicherstellen, dass keywords eine Liste ist
 
-    # Suchparameter für die API
-    params = {
-        "pav": "true",  # Vermittlung durch die Arbeitsagentur
-        "angebotsart": "1",  # Angebotsart: 1 für Stellenangebote
-        "size": 50  # Anzahl der Ergebnisse pro Seite
-    }
-    if keywords:
-        params["was"] = ",".join(keywords)  # Suchbegriffe, z.B. Jobtitel
-    if location:
-        params["wo"] = location  # Ort
-    if radius:
-        params["umkreis"] = radius  # Umkreis in km
+    all_new_jobs = []  # Liste für alle neuen Jobs
 
-    print(f"🔍 API Abfrage mit Parametern: {params}")
+    keywords = [kw.strip() for kw in keywords if kw.strip()]  # Leere Keywords entfernen
+    if not keywords:
+        keywords = [None]  # Wenn keine Keywords angegeben sind, setze auf None
 
-    try:
-        response = requests.get(API_URL, headers=HEADERS, params=params, timeout=30)  # API-Anfrage senden
-        response.raise_for_status()  # Fehler bei der Anfrage auslösen
-        data = response.json()
+    for keyword in keywords:
+        params = { # Suchparameter für die API
+            "pav": "true",  # Vermittlung durch die Arbeitsagentur
+            "angebotsart": "1",  # Angebotsart: 1 für Stellenangebote
+            "size": 100,  # Anzahl der Ergebnisse pro Seite
+            "veroeffentlichtseit": 60,  # Ergebnisse der letzten 30 Tage
+            "was": keyword  # Suchbegriff, z.B. Jobtitel
+        }
+        if keyword is not None:
+            params["was"] = keyword       
+        if location:
+            params["wo"] = location  # Ort
+        if radius:
+            params["umkreis"] = radius  # Umkreis in km
 
-        new_jobs = []
-        if not data.get("stellenangebote"):
-                print("Keine neuen Jobs gefunden.")
-                print("API response-body: {json.dumps(data, indent=2)}")
-                return []
-        for job in data.get("stellenangebote", []):
-            job_entry = {
-                "_id": job.get("hashId", "") or str(uuid.uuid4()),  # Eindeutige Job-ID
-                "title": job.get("beruf", "") or "",
-                "company": job.get("arbeitgeber", "") or "",
-                "location": job.get("arbeitsort", "") or "",
-                "link": job.get("stellenangebotURL", "") or "",
-                "source": "Arbeitsagentur",
-                "bookmark": False  # Standardmäßig nicht gebookmarkt
-            }
+        print(f"🔍 API Abfrage mit Parametern: {params}")
 
-            # In die Datenbank einfügen
-            new_jobs.append(job_entry)
+        try:
+            response = requests.get(API_URL, headers=HEADERS, params=params, timeout=30)  # API-Anfrage senden
+            response.raise_for_status()  # Fehler bei der Anfrage auslösen
+            data = response.json()
 
-        collection.insert_many(new_jobs)  # Alle neuen Jobs in die Datenbank einfügen
-        print(f"{len(new_jobs)} Jobs in MongoDB von der Arbeitsagentur gespeichert.")
-        return new_jobs
+            new_jobs = []
+            if not data.get("stellenangebote"):
+                    print("Keine neuen Jobs gefunden.")
+                    print("API response-body: {json.dumps(data, indent=2)}")
+                    return []
+            for job in data.get("stellenangebote", []):
+                job_entry = {
+                    "_id": job.get("hashId", "") or str(uuid.uuid4()),  # Eindeutige Job-ID
+                    "title": job.get("beruf", "") or "",
+                    "company": job.get("arbeitgeber", "") or "",
+                    "location": job.get("arbeitsort", "") or "",
+                    "link": job.get("stellenangebotURL", "") or "",
+                    "source": "Arbeitsagentur",
+                    "bookmark": False  # Standardmäßig nicht gebookmarkt
+                }
 
-    except Exception as e:  # Fehlerbehandlung bei der API-Anfrage
-        if response.status_code == 403:
-            print("❌ Zugriff verweigert. Bitte überprüfe deinen API-Schlüssel.")
-        print(f"Fehler beim Abrufen der API-Daten: {e}")
-        return []  # Leere Liste bei Fehlern zurückgeben
+                # In die Datenbank einfügen
+                new_jobs.append(job_entry)
+
+            collection.insert_many(new_jobs)  # Alle neuen Jobs in die Datenbank einfügen
+            print(f"{len(new_jobs)} Jobs in MongoDB von der Arbeitsagentur gespeichert.")
+            all_new_jobs.extend(new_jobs)  # Alle neuen Jobs zur Gesamtliste hinzufügen
+
+        except Exception as e:  # Fehlerbehandlung bei der API-Anfrage
+            if response.status_code == 403:
+                print("❌ Zugriff verweigert. Bitte überprüfe deinen API-Schlüssel.")
+            print(f"Fehler beim Abrufen der API-Daten: {e}")
+            continue
+    return all_new_jobs
 
   
