@@ -33,15 +33,18 @@ function App() {
 
   const handleBookmarkChange = (e, job) => {
     const updatedBookmarkStatus = e.target.checked;
+    
     const updatedJobs = jobs.map((j) =>
-      j.link === job.link ? { ...j, bookmark: updatedBookmarkStatus } : j
+      j._id === job._id ? { ...j, bookmark: updatedBookmarkStatus } : j
     );
     setJobs(updatedJobs);
   
     fetch("http://localhost:3050/update_bookmark", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ _id: job._id, bookmark: updatedBookmarkStatus }),
+      body: JSON.stringify({ 
+        _id: job._id, 
+        bookmark: updatedBookmarkStatus }),
     })
       .then((res) => res.json())
       .then((data) => {
