@@ -17,12 +17,11 @@ jobs:
         with:
           python-version: 3.11
 
-      - name: Install flake8 and black
+      - name: Install tools
         run: pip install flake8 black
 
-      - name: Run flake8
-        run: flake8 backend/
+      - name: Auto-format with black
+        run: black backend/
 
-      - name: Run black with check and fix
-        run: |
-          black backend/ --check || black backend/
+      - name: Run flake8 (after formatting)
+        run: flake8 backend/
