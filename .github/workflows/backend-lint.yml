@@ -1,0 +1,24 @@
+name: Backend Lint Check
+
+on:
+  push: {}
+  pull_request: {}
+
+jobs:
+  flake8-backend:
+    name: Backend flake8 check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install Dependencies
+        run: pip install flake8
+
+      - name: Run flake8
+        run: flake8 --max-line-length=88 backend/
