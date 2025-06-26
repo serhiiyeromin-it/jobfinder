@@ -1,6 +1,4 @@
 from unittest.mock import patch
-import requests
-import json
 from crawler_api_baa import crawl_arbeitsagentur
 
 def fake_response(*args, **kwargs):

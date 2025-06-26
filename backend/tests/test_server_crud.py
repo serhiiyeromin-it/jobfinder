@@ -1,7 +1,3 @@
-
-import json
-from bson import ObjectId
-
 def test_jobsuchen_get_empty(client):
     resp = client.get('/jobsuchen')
     assert resp.status_code == 200

@@ -1,4 +1,3 @@
-import os
 from unittest import mock
 import pytest
 import mongomock
@@ -17,7 +16,7 @@ def client():
 def clear_db():
     jobs_collection.delete_many({})
     yield
-    
+
 @pytest.fixture()
 def collection():
     """Alias für die Mongo-Collection, damit bestehende Tests funktionieren."""

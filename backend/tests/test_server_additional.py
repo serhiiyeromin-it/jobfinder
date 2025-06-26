@@ -1,7 +1,4 @@
-
-import json
 from bson import ObjectId
-import pytest
 
 def _insert_dummy_job(collection):
     job = {"title": "Dev", "company": "TestCorp", "link": "http://example.com", "bookmark": False}
