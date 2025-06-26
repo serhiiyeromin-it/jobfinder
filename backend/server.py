@@ -3,7 +3,11 @@ from flask_cors import CORS
 from flask_mail import Mail, Message
 import os
 from dotenv import load_dotenv
-from mongodb_connect import collection, search_alerts_collection, search_results_collection
+from mongodb_connect import (
+    collection,
+    search_alerts_collection,
+    search_results_collection,
+)
 from bson.objectid import ObjectId
 from apscheduler.schedulers.background import BackgroundScheduler
 import datetime
@@ -73,7 +77,8 @@ def jobsuchen():
                     new_job['_id'] = str(result.inserted_id)
                     unique_jobs.append(new_job)
                     print(
-                        f"Neuer Job eingefügt: {new_job['title']} bei {new_job['company']}"
+                        f"Neuer Job eingefügt: {new_job['title']} bei "
+                        f"{new_job['company']}"
                     )
 
         print(f"{len(unique_jobs)} Jobs in MongoDB gespeichert.")
@@ -100,7 +105,8 @@ def jobsuchen_baa():
         radius = int(data.get('radius', 30))
 
         print(
-            f"Starte Arbeitsagentur-Crawl mit: {keywords}, {location}, {radius}km"
+            f"Starte Arbeitsagentur-Crawl mit: {keywords}, {location}, "
+            f"{radius}km"
         )
 
         new_jobs = crawl_arbeitsagentur(keywords, location, radius, collection)
@@ -216,7 +222,8 @@ def execute_search_alerts():
     with app.app_context():
         alerts = list(search_alerts_collection.find())
         print(
-            f"[{datetime.datetime.now()}] Starte Ausführung für {len(alerts)} gespeicherte Suchaufträge."
+            f"[{datetime.datetime.now()}] Starte Ausführung für "
+            f"{len(alerts)} gespeicherte Suchaufträge."
         )
 
         for alert in alerts:
@@ -231,7 +238,8 @@ def execute_search_alerts():
                 continue
 
             print(
-                f"Führe Suchauftrag aus für: {keywords} in {location} ({radius}km)"
+                f"Führe Suchauftrag aus für: {keywords} in {location} "
+                f"({radius}km)"
             )
 
             print(
@@ -261,7 +269,8 @@ def execute_search_alerts():
 
             if unique_new_jobs:
                 print(
-                    f"Gefunden: {len(unique_new_jobs)} wirklich neue Jobs für Suchauftrag {alert_id_str}."
+                    f"Gefunden: {len(unique_new_jobs)} wirklich neue Jobs für "
+                    f"Suchauftrag {alert_id_str}."
                 )
 
                 for job in unique_new_jobs:
@@ -270,10 +279,13 @@ def execute_search_alerts():
 
                 search_results_collection.insert_many(unique_new_jobs)
 
-                subject = f"Neue Jobangebote für deine Suche: {', '.join(keywords)}"
+                subject = (
+                    f"Neue Jobangebote für deine Suche: {', '.join(keywords)}"
+                )
 
                 body = (
-                    f"Hallo,\n\nes wurden {len(unique_new_jobs)} neue Stellen für deinen Suchauftrag gefunden:\n\n"
+                    f"Hallo,\n\nes wurden {len(unique_new_jobs)} neue Stellen "
+                    f"für deinen Suchauftrag gefunden:\n\n"
                 )
                 for job in unique_new_jobs:
                     body += f"- Titel: {job.get('title', 'N/A')}\n"
@@ -305,4 +317,4 @@ def get_search_results(alert_id):
 
 
 if __name__ == '__main__':  # Startet die Flask-App
-    app.run(host='0.0.0.0', port=3050)  # Startet die App
+    app.run(host='0.0.0.0', port=3050)  #
