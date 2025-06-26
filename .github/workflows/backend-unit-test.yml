@@ -27,7 +27,6 @@ jobs:
         run: pip install -r dev-requirements.txt
 
       - name: Run pytest with coverage
-        working-directory: backend
         run: |
           pytest \
             --cov=backend \
