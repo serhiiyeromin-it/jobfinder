@@ -66,7 +66,7 @@ jobs:
       - name: Smoke-Test Stack (Docker Compose)
         run: |
           docker compose -f docker-compose.yml up -d
-          curl -f http://localhost:5000/health
+          curl -f http://localhost:3050/health
           docker compose down
 
       - name: Cleanup Docker cache
