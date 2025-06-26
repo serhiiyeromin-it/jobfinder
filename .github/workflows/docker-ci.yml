@@ -6,6 +6,8 @@ on:
 
 env:
   IMAGE_NAMESPACE: ${{ github.repository_owner }}
+  REGISTRY_GHCR: ghcr.io
+  REGISTRY_DH: docker.io
 
 jobs:
   build-and-push:
@@ -27,13 +29,13 @@ jobs:
 
       - uses: docker/login-action@v2
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY_GHCR }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
           
       - uses: docker/login-action@v2
         with:
-          registry: docker.io
+          registry: ${{ env.REGISTRY_DH }}
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}  
 
@@ -64,9 +66,18 @@ jobs:
             docker.io/${{ secrets.DOCKERHUB_USERNAME }}/nightcrawler-frontend:latest
 
       - name: Smoke-Test Stack (Docker Compose)
+        if: ${{ hashFiles('docker-compose.yml') != '' }}
         run: |
-          docker compose -f docker-compose.yml up -d
-          curl -f http://localhost:3050/health
+          docker compose up -d
+          for i in {1..10}; do
+            if curl -sf http://localhost:3050/health ; then
+              echo "✅ backend ready"; break
+            fi
+            echo "⏳ waiting ($i/10)"; sleep 3
+            if [ $i -eq 10 ]; then
+              echo "❌ backend not ready"; docker compose logs backend; exit 1
+            fi
+          done
           docker compose down
 
       - name: Cleanup Docker cache
