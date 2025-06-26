@@ -1,68 +1,74 @@
 # Projekt Night-Crawler – Frontend
 
-Dieses Frontend wurde mit React und Vite erstellt und dient als Benutzeroberfläche für die Jobsuche und -verwaltung.
+Dieses Frontend wurde mit React und Vite entwickelt und bietet eine benutzerfreundliche Oberfläche zur Jobsuche und Verwaltung gespeicherter Stellenanzeigen.
 
 ## Verwendete Technologien und Bibliotheken
 
-Das Projekt stützt sich auf etablierte und moderne Bibliotheken, um eine reaktive und schnelle User Experience zu gewährleisten.
+Das Projekt basiert auf modernen Webtechnologien und bewährten Bibliotheken, um eine performante und reaktive Nutzererfahrung zu gewährleisten.
 
 ### Hauptbibliotheken (Dependencies)
 
-*   **[React](https://react.dev/)**: Die Kernbibliothek zur Erstellung der Benutzeroberfläche (UI). Alle Komponenten wie `SearchForm`, `SearchAlerts` und `BookmarkedJobs` basieren auf React und seinem Komponentenmodell.
-*   **[React DOM](https://react.dev/reference/react-dom)**: Verbindet React mit dem Browser, indem es die React-Komponenten in die `index.html`-Datei rendert und auf Benutzerinteraktionen reagiert.
-*   **[React Router DOM](https://reactrouter.com/)**: Wird für das client-seitige Routing verwendet. Es ermöglicht die Navigation zwischen den verschiedenen Ansichten der Anwendung (z.B. `/`, `/bookmarked`, `/search_alerts`), ohne dass die Seite jedes Mal neu vom Server geladen werden muss.
+- **[React](https://react.dev/)**: Die zentrale Bibliothek zur Erstellung der Benutzeroberfläche. Komponenten wie `SearchForm`, `SearchAlerts` und `BookmarkedJobs` sind auf dem React-Komponentenmodell aufgebaut.
+- **[React DOM](https://react.dev/reference/react-dom)**: Bindet React-Komponenten an das DOM und ermöglicht deren Darstellung im Browser sowie die Reaktion auf Benutzerinteraktionen.
+- **[React Router DOM](https://reactrouter.com/)**: Implementiert clientseitiges Routing und erlaubt die Navigation zwischen verschiedenen Ansichten wie `/`, `/bookmarked` und `/search_alerts`, ohne dass die Seite neu geladen wird.
 
 ### Entwicklungswerkzeuge (Dev-Dependencies)
 
-*   **[Vite](https://vitejs.dev/)**: Dient als schnelles und modernes Build-Tool und Entwicklungsserver. Vite ist verantwortlich für den `dev`-Server (mit Hot-Module-Replacement für eine schnelle Entwicklung) und für die Erstellung der optimierten Produktionsdateien.
-*   **[ESLint](https://eslint.org/)**: Ein Tool zur statischen Code-Analyse, das hilft, potenzielle Fehler, Bugs und Stilprobleme im JavaScript-Code frühzeitig zu erkennen und eine konsistente Code-Qualität sicherzustellen.
+- **[Vite](https://vitejs.dev/)**: Ein modernes Build-Tool und Entwicklungsserver mit Hot-Module-Replacement (HMR) für schnelle Entwicklungszyklen und effizientes Production-Building.
+- **[ESLint](https://eslint.org/)**: Statisches Codeanalyse-Tool zur frühzeitigen Erkennung von Fehlern und zur Sicherstellung konsistenter Codequalität.
+- **[Prettier](https://prettier.io/)**: Automatisches Codeformatierungstool zur Durchsetzung einheitlicher Stilregeln.
+- **[Markdownlint](https://github.com/DavidAnson/markdownlint)**: Linter für Markdown-Dateien zur Sicherstellung einheitlicher Struktur und Lesbarkeit.
 
 ---
 
 ## Starten des Frontends
 
-1.  Wechsle in das `frontend`-Verzeichnis:
-    ```bash
-    cd frontend
-    ```
+1. In das `frontend`-Verzeichnis wechseln:
 
-2.  Installiere die Abhängigkeiten:
-    ```bash
-    npm install
-    ```
+   ```bash
+   cd frontend
+   ```
 
-3.  Starte den Entwicklungsserver:
-    ```bash
-    npm run dev
-    ```
+2. Abhängigkeiten installieren:
 
-Die Anwendung ist dann standardmäßig unter `http://localhost:5173` erreichbar.
+   ```bash
+   npm install
+   ```
 
-=======
+3. Entwicklungsserver starten:
 
-## Repository Strategie
+   ```bash
+   npm run dev
+   ```
+
+   Die Anwendung ist anschließend unter `http://localhost:5173` erreichbar.
+
+---
+
+## Repository-Strategie
 
 ### GitHub Flow
 
-1. main
-   1. Immer deploy-bereit
-   2. Jede Änderung nur über Pull Request (PR)
+1. **`main`**
+   - Immer deploy-bereit
+   - Änderungen nur über Pull Requests (PRs)
 
-2. Feature-Branches
-   1. Kurzlebig (< 1–2 Tage)
-   2. Namensschema: feature/kurzbeschreibung, bugfix/-, chore/-
-      1. z.B. feature/login-form, bugfix/timeout-error
+2. **Feature-Branches**
+   - Kurzlebig (idealerweise < 1–2 Tage)
+   - Namensschema: `feature/...`, `bugfix/...`, `chore/...`
+     - Beispiele: `feature/login-form`, `bugfix/timeout-error`
 
-3. Commit-Messages
-   1. Form: type(scope): kurzbeschreibung
-      1. feat(backend): add health endpoint
+3. **Commit Messages**
+   - Format: `type(scope): beschreibung`
+     - Beispiel: `feat(backend): add health endpoint`
 
-4. Labels & Milestones
-   1. GitHub Issues mit Labels (bug, enhancement) und Milestones für Releases
+4. **Labels & Milestones**
+   - GitHub Issues mit Labels wie `bug`, `enhancement`
+   - Meilensteine strukturieren Releases
 
-5. Pull Request → Review → Merge
-   1. Mindestens 1 Reviewer
-   2. Automatisierte Checks müssen grün sein
+5. **Pull Requests**
+   - Mindestens ein Reviewer erforderlich
+   - Automatisierte Checks müssen erfolgreich sein
 
-6. Deploy
-   1. Jeder Merge in main triggert CI/CD → Deployment
+6. **Deployment**
+   - Jeder Merge in `main` triggert CI/CD → automatisiertes Deployment
