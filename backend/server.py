@@ -258,8 +258,7 @@ def execute_search_alerts():
 
             all_new_jobs = new_jobs_baa
             print(
-                f"-> Insgesamt {len(all_new_jobs)} 
-                Jobs von beiden Plattformen gefunden."
+                f"-> Insgesamt {len(all_new_jobs)} Jobs gefunden."
             )
 
             existing_links = {
