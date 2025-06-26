@@ -1,0 +1,74 @@
+name: Docker CI & Push
+
+on:
+  push: {}                    
+  workflow_dispatch: {}
+
+env:
+  IMAGE_NAMESPACE: ${{ github.repository_owner }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set lowercase namespace
+        run: echo "IMAGE_NAMESPACE=$(echo $IMAGE_NAMESPACE | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      - uses: docker/setup-qemu-action@v2
+      - uses: docker/setup-buildx-action@v2
+        with:
+          install: true
+
+      - uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - uses: docker/login-action@v2
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}  
+
+      - name: Build & Push Backend
+        uses: docker/build-push-action@v4
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ env.IMAGE_NAMESPACE }}/nightcrawler-backend:${{ github.sha }}
+            ghcr.io/${{ env.IMAGE_NAMESPACE }}/nightcrawler-backend:latest
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/nightcrawler-backend:${{ github.sha }}
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/nightcrawler-backend:latest
+
+      - name: Build & Push Frontend
+        uses: docker/build-push-action@v4
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ env.IMAGE_NAMESPACE }}/nightcrawler-frontend:${{ github.sha }}
+            ghcr.io/${{ env.IMAGE_NAMESPACE }}/nightcrawler-frontend:latest
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/nightcrawler-frontend:${{ github.sha }}
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/nightcrawler-frontend:latest
+
+      - name: Smoke-Test Stack (Docker Compose)
+        run: |
+          docker compose -f docker-compose.yml up -d
+          curl -f http://localhost:5000/health
+          docker compose down
+
+      - name: Cleanup Docker cache
+        if: always()
+        run: docker system prune -af --volumes
