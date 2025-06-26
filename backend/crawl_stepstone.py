@@ -1,8 +1,7 @@
-import re
 import requests
-import time
 from bs4 import BeautifulSoup
 from requests.exceptions import RequestException
+
 
 def crawl_stepstone(keywords, location, radius):
     """
@@ -15,10 +14,17 @@ def crawl_stepstone(keywords, location, radius):
     formatted_location = location.lower().replace(" ", "-")
 
     # Grund-URL mit Platzhaltern für Radius
-    url = f"https://www.stepstone.de/jobs/{formatted_keywords_a}/in-{formatted_location}?radius={radius}&sort=2&action=sort_publish"
+    url = (
+        f"https://www.stepstone.de/jobs/{formatted_keywords_a}/"
+        f"in-{formatted_location}?radius={radius}&sort=2&action=sort_publish"
+    )
 
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/91.0.4472.124 Safari/537.36"
+        )
     }
 
     new_jobs = []
@@ -36,21 +42,34 @@ def crawl_stepstone(keywords, location, radius):
 
             if response.status_code == 200:
                 soup = BeautifulSoup(response.content, "html.parser")
-                job_cards = soup.find_all("article", attrs={"data-testid": "job-item"})
+                job_cards = soup.find_all(
+                    "article", attrs={"data-testid": "job-item"}
+                )
 
                 for job in job_cards:
                     title_element = job.find("a", href=True)
-                    title = title_element.get_text(strip=True) if title_element else "Kein Titel"
-                    link = "https://www.stepstone.de" + title_element["href"] if title_element else "Kein Link"
+                    title = (
+                        title_element.get_text(strip=True)
+                        if title_element else "Kein Titel"
+                    )
+                    link = (
+                        "https://www.stepstone.de" + title_element["href"]
+                        if title_element else "Kein Link"
+                    )
 
-                    company = job.find("span", attrs={"data-testid": "job-item-company-name"})
-                    company_text = company.get_text(strip=True) if company else "Keine Firma"
+                    company = job.find(
+                        "span", attrs={"data-testid": "job-item-company-name"}
+                    )
+                    company_text = (
+                        company.get_text(strip=True)
+                        if company else "Keine Firma"
+                    )
 
                     job_data = {
                         "title": title,
                         "company": company_text,
                         "link": link,
-                        "source": "StepStone"
+                        "source": "StepStone",
                     }
 
                     new_jobs.append(job_data)

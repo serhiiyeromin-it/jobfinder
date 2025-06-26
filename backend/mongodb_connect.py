@@ -1,5 +1,4 @@
 import os
-import pymongo
 from pymongo import MongoClient
 from dotenv import load_dotenv
 
@@ -12,7 +11,7 @@ uri = os.getenv("MONGO_URI")
 client = MongoClient(uri)
 
 # Zugriff auf die Datenbank
-db = client['job_database']  # 'job_database' ist der Name der Datenbank, die du erstellen möchtest.
+db = client['job_database']  # 'job_database' ist der Name der Datenbank.
 
 # Zugriff auf die Sammlung (Collection)
 collection = db['jobs']
