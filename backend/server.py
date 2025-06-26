@@ -3,7 +3,6 @@ from flask_cors import CORS
 from flask_mail import Mail, Message
 import os
 from dotenv import load_dotenv
-from crawl_stepstone import crawl_stepstone
 from mongodb_connect import collection, search_alerts_collection, search_results_collection
 from bson.objectid import ObjectId
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -11,9 +10,8 @@ import datetime
 from crawler_api_baa import crawl_arbeitsagentur
 
 load_dotenv()  # Lädt die Umgebungsvariablen aus der .env-Datei
-app = Flask(__name__)  # Erstellt eine Flask-Instanz, damit wir die Flask-Funktionen nutzen können
-CORS(app)  # Erlaubt Cross-Origin-Requests, das sind Anfragen von einer anderen Domain
-
+app = Flask(__name__)  # Erstellt eine Flask-Instanz
+CORS(app)  # Erlaubt Cross-Origin-Requests
 
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
 app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
@@ -33,13 +31,13 @@ def send_email(to_email, subject, body):
     except Exception as e:
         print(f"Fehler beim Senden der Email: {e}")
 
-@app.route('/jobsuchen', methods=['GET', 'POST'])  # Definiert die Route und die erlaubten Methoden
+@app.route('/jobsuchen', methods=['GET', 'POST'])
 def jobsuchen():
     if request.method == 'POST':
-        data = request.json  # Holt die JSON-Daten aus der Anfrage
-        keywords = data.get('keywords', [])  # Holt die Keywords aus den Daten, Standard ist eine leere Liste
-        location = data.get('location', '')  # Holt den Standort aus den Daten, Standard ist ein leerer String
-        radius = int(data.get('radius', '30'))  # Holt den Radius aus den Daten, Standard ist 30 (in km)
+        data = request.json
+        keywords = data.get('keywords', [])
+        location = data.get('location', '')
+        radius = int(data.get('radius', '30'))
 
         print("Scraping gestartet mit:", keywords, location, radius)
         new_jobs_stepstone = []
@@ -49,11 +47,12 @@ def jobsuchen():
         for job in new_jobs:
             job['bookmark'] = False
 
-        collection.delete_many({"bookmark": False})  # Löscht alle alten Jobs in der Datenbank, um Platz für neue zu schaffen
+        collection.delete_many({"bookmark": False})
         print("Alle alten Jobs in der Datenbank gelöscht.")
 
         bookmarked_jobs = [
-            {**job, '_id': str(job['_id'])} for job in collection.find({"bookmark": True})
+            {**job, '_id': str(job['_id'])}
+            for job in collection.find({"bookmark": True})
         ]
 
         unique_jobs = []
@@ -68,7 +67,9 @@ def jobsuchen():
                     result = collection.insert_one(new_job)
                     new_job['_id'] = str(result.inserted_id)
                     unique_jobs.append(new_job)
-                    print(f"Neuer Job eingefügt: {new_job['title']} bei {new_job['company']}")
+                    print(
+                        f"Neuer Job eingefügt: {new_job['title']} bei {new_job['company']}
+                    )
 
         print(f"{len(unique_jobs)} Jobs in MongoDB gespeichert.")
         return jsonify(unique_jobs)
@@ -76,7 +77,10 @@ def jobsuchen():
     elif request.method == 'GET':
         jobs = [
             {**job, '_id': str(job['_id'])}
-            for job in collection.find({"bookmark": False}, {'title': 1, 'company': 1, 'link': 1, 'bookmark': 1})
+            for job in collection.find(
+                {"bookmark": False},
+                {'title': 1, 'company': 1, 'link': 1, 'bookmark': 1}
+            )
         ]
         print(f"{len(jobs)} Jobs aus MongoDB abgerufen.")
         return jsonify(jobs)
@@ -89,7 +93,9 @@ def jobsuchen_baa():
         location = data.get('location', '')
         radius = int(data.get('radius', 30))
 
-        print(f"Starte Arbeitsagentur-Crawl mit: {keywords}, {location}, {radius}km")
+        print(
+            f"Starte Arbeitsagentur-Crawl mit: {keywords}, {location}, {radius}km"
+        )
 
         new_jobs = crawl_arbeitsagentur(keywords, location, radius, collection)
 
@@ -98,8 +104,8 @@ def jobsuchen_baa():
 @app.route('/update_bookmark', methods=['POST'])
 def update_bookmark():
     data = request.json
-    job_id = data.get('_id')  # Job-ID aus den Daten
-    bookmark_status = data.get('bookmark')  # Bookmark-Status aus den Daten
+    job_id = data.get('_id')
+    bookmark_status = data.get('bookmark')
 
     if not job_id or bookmark_status is None:
         return jsonify({'error': 'Job-ID und Bookmark-Status müssen angegeben werden.'}), 400
@@ -118,7 +124,12 @@ def update_bookmark():
 
 @app.route('/bookmarked_jobs', methods=['GET'])
 def get_bookmarked_jobs():
-    jobs = list(collection.find({"bookmark": True}, {'title': 1, 'company': 1, 'link': 1, 'bookmark': 1}))
+    jobs = list(
+        collection.find(
+            {"bookmark": True},
+            {'title': 1, 'company': 1, 'link': 1, 'bookmark': 1}
+        )
+    )
     for job in jobs:
         job['_id'] = str(job['_id'])
     print(f"{len(jobs)} bookmarked Jobs aus MongoDB abgerufen.")
@@ -141,7 +152,10 @@ def update_search_alert(id):
     if result.modified_count == 1:
         return jsonify({'success': True, 'message': 'Suchauftrag erfolgreich aktualisiert.'})
     else:
-        return jsonify({'success': False, 'error': 'Suchauftrag nicht gefunden oder keine Änderungen vorgenommen.'}), 404
+        return jsonify({
+            'success': False,
+            'error': 'Suchauftrag nicht gefunden oder keine Änderungen vorgenommen.'
+        }), 404
 
 @app.route('/save_search', methods=['POST'])
 def save_search():
@@ -163,7 +177,12 @@ def save_search():
 
 @app.route('/search_alerts', methods=['GET'])
 def get_search_alerts():
-    search_alerts = list(search_alerts_collection.find({}, {'keywords': 1, 'location': 1, 'radius': 1, 'email': 1}))
+    search_alerts = list(
+        search_alerts_collection.find(
+            {},
+            {'keywords': 1, 'location': 1, 'radius': 1, 'email': 1}
+        )
+    )
     for alert in search_alerts:
         alert['_id'] = str(alert['_id'])
 
@@ -182,7 +201,9 @@ scheduler = BackgroundScheduler()
 def execute_search_alerts():
     with app.app_context():
         alerts = list(search_alerts_collection.find())
-        print(f"[{datetime.datetime.now()}] Starte Ausführung für {len(alerts)} gespeicherte Suchaufträge.")
+        print(
+            f"[{datetime.datetime.now()}] Starte Ausführung für {len(alerts)} gespeicherte Suchaufträge."
+        )
 
         for alert in alerts:
             alert_id_str = str(alert['_id'])
@@ -195,25 +216,39 @@ def execute_search_alerts():
                 print(f"Suchauftrag {alert_id_str} hat keine E-Mail-Adresse. Überspringe.")
                 continue
 
-            print(f"Führe Suchauftrag aus für: {keywords} in {location} ({radius}km)")
+            print(
+                f"Führe Suchauftrag aus für: {keywords} in {location} ({radius}km)"
+            )
 
-            print(f"-> Crawle bei Arbeitsagentur für Suchauftrag {alert_id_str}...")
-            new_jobs_baa = crawl_arbeitsagentur(keywords, location, radius, collection)
+            print(
+                f"-> Crawle bei Arbeitsagentur für Suchauftrag {alert_id_str}..."
+            )
+            new_jobs_baa = crawl_arbeitsagentur(
+                keywords, location, radius, collection
+            )
 
             all_new_jobs = new_jobs_baa
-            print(f"-> Insgesamt {len(all_new_jobs)} Jobs von beiden Plattformen gefunden.")
+            print(
+                f"-> Insgesamt {len(all_new_jobs)} Jobs von beiden Plattformen gefunden."
+            )
 
             existing_links = {
-                job['link'] for job in search_results_collection.find(
+                job['link']
+                for job in search_results_collection.find(
                     {'search_alert_id': alert_id_str},
                     {'link': 1}
                 )
             }
 
-            unique_new_jobs = [job for job in all_new_jobs if job.get('link') and job['link'] not in existing_links]
+            unique_new_jobs = [
+                job for job in all_new_jobs
+                if job.get('link') and job['link'] not in existing_links
+            ]
 
             if unique_new_jobs:
-                print(f"Gefunden: {len(unique_new_jobs)} wirklich neue Jobs für Suchauftrag {alert_id_str}.")
+                print(
+                    f"Gefunden: {len(unique_new_jobs)} wirklich neue Jobs für Suchauftrag {alert_id_str}."
+                )
 
                 for job in unique_new_jobs:
                     job['search_alert_id'] = alert_id_str
@@ -223,7 +258,9 @@ def execute_search_alerts():
 
                 subject = f"Neue Jobangebote für deine Suche: {', '.join(keywords)}"
 
-                body = f"Hallo,\n\nes wurden {len(unique_new_jobs)} neue Stellen für deinen Suchauftrag gefunden:\n\n"
+                body = (
+                    f"Hallo,\n\nes wurden {len(unique_new_jobs)} neue Stellen für deinen Suchauftrag gefunden:\n\n"
+                )
                 for job in unique_new_jobs:
                     body += f"- Titel: {job.get('title', 'N/A')}\n"
                     body += f"  Firma: {job.get('company', 'N/A')}\n"
@@ -234,17 +271,21 @@ def execute_search_alerts():
 
                 send_email(email, subject, body)
             else:
-                print(f"Keine neuen Jobs für Suchauftrag {alert_id_str} gefunden.")
+                print(
+                    f"Keine neuen Jobs für Suchauftrag {alert_id_str} gefunden."
+                )
 
 scheduler.add_job(execute_search_alerts, 'interval', minutes=1)
 scheduler.start()
 
 @app.route('/get_search_results/<string:alert_id>', methods=['GET'])
 def get_search_results(alert_id):
-    results = list(search_results_collection.find({"search_alert_id": alert_id}))
+    results = list(
+        search_results_collection.find({"search_alert_id": alert_id})
+    )
     for result in results:
         result['_id'] = str(result['_id'])
     return jsonify(results)
 
 if __name__ == '__main__':  # Startet die Flask-App
-    app.run(host='0.0.0.0', port=3050)  # Startet die App
+    app.run(host='0.0.0.0', port=3050)  # Startet die

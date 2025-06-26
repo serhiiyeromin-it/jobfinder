@@ -57,7 +57,6 @@ def crawl_arbeitsagentur(keywords, location, radius, collection=collection):
             new_jobs = []
             if not data.get("stellenangebote"):
                 print("Keine neuen Jobs gefunden.")
-                print("API response-body:", json.dumps(data, indent=2, ensure_ascii=False))
                 return []
             for job in data.get("stellenangebote", []):
                 job_entry = {
@@ -74,7 +73,8 @@ def crawl_arbeitsagentur(keywords, location, radius, collection=collection):
                 new_jobs.append(job_entry)
 
             collection.insert_many(new_jobs)
-            print(f"{len(new_jobs)} Jobs in MongoDB von der Arbeitsagentur gespeichert.")
+            print(
+                f"{len(new_jobs)} Jobs in MongoDB von der Arbeitsagentur gespeichert.")
             all_new_jobs.extend(new_jobs)
 
         except Exception as e:
@@ -83,5 +83,4 @@ def crawl_arbeitsagentur(keywords, location, radius, collection=collection):
             print(f"Fehler beim Abrufen der API-Daten: {e}")
             continue
     return all_new_jobs
-
-
+    
