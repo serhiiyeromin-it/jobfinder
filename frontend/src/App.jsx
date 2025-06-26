@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import './App.css';
+import "./App.css";
 import BookmarkedJobs from "./components/BookmarkedJobs";
 import SearchForm from "./components/SearchForm";
 import SearchAlerts from "./components/SearchAlerts";
@@ -33,26 +33,32 @@ function App() {
 
   const handleBookmarkChange = (e, job) => {
     const updatedBookmarkStatus = e.target.checked;
-    
+
     const updatedJobs = jobs.map((j) =>
-      j._id === job._id ? { ...j, bookmark: updatedBookmarkStatus } : j
+      j._id === job._id ? { ...j, bookmark: updatedBookmarkStatus } : j,
     );
     setJobs(updatedJobs);
-  
+
     fetch("http://localhost:3050/update_bookmark", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        _id: job._id, 
-        bookmark: updatedBookmarkStatus }),
+      body: JSON.stringify({
+        _id: job._id,
+        bookmark: updatedBookmarkStatus,
+      }),
     })
       .then((res) => res.json())
       .then((data) => {
         if (!data.success) {
-          console.error("Fehler beim Aktualisieren des Lesezeichens:", data.message);
+          console.error(
+            "Fehler beim Aktualisieren des Lesezeichens:",
+            data.message,
+          );
         }
       })
-      .catch((err) => console.error("Fehler beim Aktualisieren des Lesezeichens:", err));
+      .catch((err) => {
+        console.error("Fehler beim Aktualisieren des Lesezeichens:", err);
+      });
   };
 
   return (
@@ -62,10 +68,10 @@ function App() {
           <Route
             path="/"
             element={
-              <SearchForm 
-                onSearch={handleSearch} 
-                jobs={jobs} 
-                handleBookmarkChange={handleBookmarkChange} 
+              <SearchForm
+                onSearch={handleSearch}
+                jobs={jobs}
+                handleBookmarkChange={handleBookmarkChange}
               />
             }
           />
@@ -77,6 +83,5 @@ function App() {
     </Router>
   );
 }
-
 
 export default App;

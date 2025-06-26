@@ -2,20 +2,20 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 function SearchForm({ onSearch, jobs, handleBookmarkChange }) {
-    const [keywords, setKeywords] = useState([]);
-    const [location, setLocation] = useState("");
-    const [radius, setRadius] = useState("30");
-    const [email, setEmail] = useState("");
-    const [isLoading, setIsLoading] = useState(false); // Boolean für den Ladezustand
-    const navigate = useNavigate();
+  const [keywords, setKeywords] = useState([]);
+  const [location, setLocation] = useState("");
+  const [radius, setRadius] = useState("30");
+  const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false); // Boolean für den Ladezustand
+  const navigate = useNavigate();
 
-    const handleAddKeyword = () => {
-        const keywordInput = document.getElementById("keyword");
-        if (keywordInput.value.trim()) {
-        setKeywords([...keywords, keywordInput.value.trim()]);
-        keywordInput.value = "";
-        }
-    };
+  const handleAddKeyword = () => {
+    const keywordInput = document.getElementById("keyword");
+    if (keywordInput.value.trim()) {
+      setKeywords([...keywords, keywordInput.value.trim()]);
+      keywordInput.value = "";
+    }
+  };
 
   const handleKeyPress = (e) => {
     const keywordInput = e.target;
@@ -37,13 +37,15 @@ function SearchForm({ onSearch, jobs, handleBookmarkChange }) {
     e.preventDefault();
     setIsLoading(true); // Ladezustand aktivieren
     onSearch({ keywords, location, radius }).then(() => {
-        setIsLoading(false);
+      setIsLoading(false);
     });
   };
 
   const handleSaveSearch = () => {
     if (!email.trim()) {
-      alert("Bitte geben Sie eine E-Mail-Adresse ein, um den Suchauftrag zu speichern.");
+      alert(
+        "Bitte geben Sie eine E-Mail-Adresse ein, um den Suchauftrag zu speichern.",
+      );
       return;
     }
 
@@ -118,8 +120,17 @@ function SearchForm({ onSearch, jobs, handleBookmarkChange }) {
         </select>
 
         <button type="submit">Jobs finden</button>
-        <input type="email" placeholder="Email-Adresse eingeben" value={email} onChange={(e) => setEmail(e.target.value)} />
-        <button type="button" onClick={handleSaveSearch} disabled={!email.trim()}>
+        <input
+          type="email"
+          placeholder="Email-Adresse eingeben"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <button
+          type="button"
+          onClick={handleSaveSearch}
+          disabled={!email.trim()}
+        >
           Suchauftrag speichern
         </button>
       </form>

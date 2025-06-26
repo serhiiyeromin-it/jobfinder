@@ -17,7 +17,10 @@ function EditAlertForm({ alert, onUpdate, onCancel }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     // Wandle den Keyword-String zurück in ein Array für das Backend
-    const keywordsArray = formData.keywords.split(",").map((k) => k.trim()).filter(Boolean);
+    const keywordsArray = formData.keywords
+      .split(",")
+      .map((k) => k.trim())
+      .filter(Boolean);
     onUpdate(formData._id, { ...formData, keywords: keywordsArray });
   };
 
@@ -84,7 +87,9 @@ function SearchAlerts() {
     fetch("http://localhost:3050/search_alerts")
       .then((res) => res.json())
       .then((data) => setSearchAlerts(data))
-      .catch((err) => console.error("Fehler beim Abrufen der Suchaufträge:", err));
+      .catch((err) => {
+        console.error("Fehler beim Abrufen der Suchaufträge:", err);
+      });
   };
 
   useEffect(() => {
@@ -93,7 +98,9 @@ function SearchAlerts() {
 
   const handleDeleteAlert = (id) => {
     if (window.confirm("Diesen Suchauftrag wirklich löschen?")) {
-      fetch(`http://localhost:3050/delete_search_alert/${id}`, { method: "DELETE" })
+      fetch(`http://localhost:3050/delete_search_alert/${id}`, {
+        method: "DELETE",
+      })
         .then((res) => {
           if (res.ok) {
             fetchAlerts(); // Liste neu laden, um den gelöschten Eintrag zu entfernen
@@ -147,16 +154,28 @@ function SearchAlerts() {
           {searchAlerts.map((alert) => (
             <div key={alert._id} className="alert-card">
               <div className="alert-details">
-                <p><strong>Keywords:</strong> {alert.keywords.join(", ")}</p>
-                <p><strong>Ort:</strong> {alert.location} ({alert.radius} km)</p>
-                <p><small>ID: {alert._id}</small></p>
+                <p>
+                  <strong>Keywords:</strong> {alert.keywords.join(", ")}
+                </p>
+                <p>
+                  <strong>Ort:</strong> {alert.location} ({alert.radius} km)
+                </p>
+                <p>
+                  <small>ID: {alert._id}</small>
+                </p>
               </div>
               <div className="alert-actions">
                 {/* Der Klick auf Bearbeiten setzt den 'editingAlert' State */}
-                <button className="btn-edit" onClick={() => setEditingAlert(alert)}>
+                <button
+                  className="btn-edit"
+                  onClick={() => setEditingAlert(alert)}
+                >
                   Bearbeiten
                 </button>
-                <button className="btn-delete" onClick={() => handleDeleteAlert(alert._id)}>
+                <button
+                  className="btn-delete"
+                  onClick={() => handleDeleteAlert(alert._id)}
+                >
                   Löschen
                 </button>
               </div>
