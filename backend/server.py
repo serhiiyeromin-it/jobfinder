@@ -10,6 +10,7 @@ import datetime
 from crawler_api_baa import crawl_arbeitsagentur
 
 load_dotenv()  # Lädt die Umgebungsvariablen aus der .env-Datei
+
 app = Flask(__name__)  # Erstellt eine Flask-Instanz
 CORS(app)  # Erlaubt Cross-Origin-Requests
 
@@ -23,6 +24,7 @@ app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_USERNAME')
 # Flask-Mail initialisieren
 mail = Mail(app)
 
+
 def send_email(to_email, subject, body):
     try:
         msg = Message(subject, recipients=[to_email], body=body)
@@ -30,6 +32,7 @@ def send_email(to_email, subject, body):
         print(f"Email erfolgreich gesendet an {to_email}.")
     except Exception as e:
         print(f"Fehler beim Senden der Email: {e}")
+
 
 @app.route('/jobsuchen', methods=['GET', 'POST'])
 def jobsuchen():
@@ -63,7 +66,9 @@ def jobsuchen():
                 bookmarked_job['link'] == new_job['link']
                 for bookmarked_job in bookmarked_jobs
             ):
-                if collection.count_documents({"_id": new_job.get('_id')}, limit=1) == 0:
+                if collection.count_documents(
+                    {"_id": new_job.get('_id')}, limit=1
+                ) == 0:
                     result = collection.insert_one(new_job)
                     new_job['_id'] = str(result.inserted_id)
                     unique_jobs.append(new_job)
@@ -85,6 +90,7 @@ def jobsuchen():
         print(f"{len(jobs)} Jobs aus MongoDB abgerufen.")
         return jsonify(jobs)
 
+
 @app.route('/jobsuchen_baa', methods=['POST'])
 def jobsuchen_baa():
     if request.method == 'POST':
@@ -100,6 +106,7 @@ def jobsuchen_baa():
         new_jobs = crawl_arbeitsagentur(keywords, location, radius, collection)
 
         return jsonify(new_jobs)
+
 
 @app.route('/update_bookmark', methods=['POST'])
 def update_bookmark():
@@ -122,6 +129,7 @@ def update_bookmark():
 
     return jsonify({'success': True})
 
+
 @app.route('/bookmarked_jobs', methods=['GET'])
 def get_bookmarked_jobs():
     jobs = list(
@@ -134,6 +142,7 @@ def get_bookmarked_jobs():
         job['_id'] = str(job['_id'])
     print(f"{len(jobs)} bookmarked Jobs aus MongoDB abgerufen.")
     return jsonify(jobs)
+
 
 @app.route('/update_search_alert/<string:id>', methods=['POST'])
 def update_search_alert(id):
@@ -157,6 +166,7 @@ def update_search_alert(id):
             'error': 'Suchauftrag nicht gefunden oder keine Änderungen vorgenommen.'
         }), 404
 
+
 @app.route('/save_search', methods=['POST'])
 def save_search():
     data = request.json
@@ -175,6 +185,7 @@ def save_search():
     search_alerts_data['_id'] = str(result.inserted_id)
     return jsonify({'success': True, 'search_alert': search_alerts_data})
 
+
 @app.route('/search_alerts', methods=['GET'])
 def get_search_alerts():
     search_alerts = list(
@@ -188,6 +199,7 @@ def get_search_alerts():
 
     return jsonify(search_alerts)
 
+
 @app.route('/delete_search_alert/<string:id>', methods=['DELETE'])
 def delete_search_alert(id):
     result = search_alerts_collection.delete_one({'_id': ObjectId(id)})
@@ -196,7 +208,9 @@ def delete_search_alert(id):
     else:
         return jsonify({'error': 'Suchauftrag nicht gefunden'}), 404
 
+
 scheduler = BackgroundScheduler()
+
 
 def execute_search_alerts():
     with app.app_context():
@@ -275,8 +289,10 @@ def execute_search_alerts():
                     f"Keine neuen Jobs für Suchauftrag {alert_id_str} gefunden."
                 )
 
+
 scheduler.add_job(execute_search_alerts, 'interval', minutes=1)
 scheduler.start()
+
 
 @app.route('/get_search_results/<string:alert_id>', methods=['GET'])
 def get_search_results(alert_id):
@@ -287,5 +303,6 @@ def get_search_results(alert_id):
         result['_id'] = str(result['_id'])
     return jsonify(results)
 
+
 if __name__ == '__main__':  # Startet die Flask-App
-    app.run(host='0.0.0.0', port=3050)  # Startet die
+    app.run(host='0.0.0.0', port=3050)  # Startet die App
