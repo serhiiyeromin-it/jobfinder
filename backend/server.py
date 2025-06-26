@@ -121,7 +121,9 @@ def update_bookmark():
     bookmark_status = data.get('bookmark')
 
     if not job_id or bookmark_status is None:
-        return jsonify({'error': 'Job-ID und Bookmark-Status müssen angegeben werden.'}), 400
+        return jsonify({
+            'error': 'Job-ID und Bookmark-Status müssen angegeben werden.'
+        }), 400
 
     if ObjectId.is_valid(job_id):
         query = {'_id': ObjectId(job_id)}
@@ -165,7 +167,9 @@ def update_search_alert(id):
         {'$set': updated_data}
     )
     if result.modified_count == 1:
-        return jsonify({'success': True, 'message': 'Suchauftrag erfolgreich aktualisiert.'})
+        return jsonify({
+            'success': True, 'message': 'Suchauftrag erfolgreich aktualisiert.'
+        })
     else:
         return jsonify({
             'success': False,
@@ -234,7 +238,10 @@ def execute_search_alerts():
             email = alert.get('email', '')
 
             if not email:
-                print(f"Suchauftrag {alert_id_str} hat keine E-Mail-Adresse. Überspringe.")
+                print(
+                    f"Suchauftrag {alert_id_str} hat keine E-Mail-Adresse. "
+                    f"Überspringe."
+                )
                 continue
 
             print(
@@ -251,7 +258,8 @@ def execute_search_alerts():
 
             all_new_jobs = new_jobs_baa
             print(
-                f"-> Insgesamt {len(all_new_jobs)} Jobs von beiden Plattformen gefunden."
+                f"-> Insgesamt {len(all_new_jobs)} 
+                Jobs von beiden Plattformen gefunden."
             )
 
             existing_links = {
@@ -317,4 +325,4 @@ def get_search_results(alert_id):
 
 
 if __name__ == '__main__':  # Startet die Flask-App
-    app.run(host='0.0.0.0', port=3050)  #
+    app.run(host='0.0.0.0', port=3050)
