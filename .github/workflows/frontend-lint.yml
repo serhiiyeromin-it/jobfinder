@@ -1,0 +1,30 @@
+name: Frontend Lint Check
+
+on:
+  push: {}
+  pull_request: {}
+
+jobs:
+  lint-frontend:
+    name: "⚛️ Frontend: eslint + prettier --check"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Run Prettier Check
+        working-directory: frontend
+        run: npm run format:check

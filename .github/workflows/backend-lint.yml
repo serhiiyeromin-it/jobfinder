@@ -6,7 +6,7 @@ on:
 
 jobs:
   flake8-backend:
-    name: Backend flake8 check
+    name: "🐍 Backend: flake8 --check"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository

@@ -29,10 +29,10 @@ server.py – Hauptserver der Anwendung (Flask)
 📦 1.Installation der Abhängigkeiten:
 
 Virtuelle Umgebung erstellen im backend:
-- python -m venv venv
+- python -m venv env
 
 Python-Umgebung aktivieren im backend:
-- .\venv\Scripts\activate (Windows)
+- .\env\Scripts\activate (Windows)
 
 Installiere alle benötigten Pakete:
 - pip install -r requirements.txt
