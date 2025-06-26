@@ -1,0 +1,9 @@
+services:
+  backend:
+    image: ghcr.io/${IMAGE_NAMESPACE}/nightcrawler-backend:latest
+    ports:
+      - "3050:3050"
+  frontend:
+    image: ghcr.io/${IMAGE_NAMESPACE}/nightcrawler-frontend:latest
+    ports:
+      - "5173:80"

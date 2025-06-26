@@ -38,6 +38,10 @@ def send_email(to_email, subject, body):
         print(f"Fehler beim Senden der Email: {e}")
 
 
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"status": "ok"}), 200
+
 @app.route('/jobsuchen', methods=['GET', 'POST'])
 def jobsuchen():
     if request.method == 'POST':
