@@ -83,4 +83,3 @@ def crawl_arbeitsagentur(keywords, location, radius, collection=collection):
             print(f"Fehler beim Abrufen der API-Daten: {e}")
             continue
     return all_new_jobs
-    

@@ -68,7 +68,7 @@ def jobsuchen():
                     new_job['_id'] = str(result.inserted_id)
                     unique_jobs.append(new_job)
                     print(
-                        f"Neuer Job eingefügt: {new_job['title']} bei {new_job['company']}
+                        f"Neuer Job eingefügt: {new_job['title']} bei {new_job['company']}"
                     )
 
         print(f"{len(unique_jobs)} Jobs in MongoDB gespeichert.")
