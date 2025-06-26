@@ -1,4 +1,4 @@
-🛠️ Projekt Night-Crawler – Backend-Dokumentation
+# 🛠️ Projekt Night-Crawler – Backend-Dokumentation
 
 📁 Projektstruktur:
 
@@ -29,16 +29,19 @@ server.py – Hauptserver der Anwendung (Flask)
 📦 1.Installation der Abhängigkeiten:
 
 Virtuelle Umgebung erstellen im backend:
+
 - python -m venv env
 
 Python-Umgebung aktivieren im backend:
+
 - .\env\Scripts\activate (Windows)
 
 Installiere alle benötigten Pakete:
+
 - pip install -r requirements.txt
 
 2.🔐 .env-Datei erstellen:
-Lege im Projektverzeichnis (Root) eine Datei namens .env an. Diese sollte die API-Schlüssel und Zugangsdaten enthalten, wie im 
+Lege im Projektverzeichnis (Root) eine Datei namens .env an. Diese sollte die API-Schlüssel und Zugangsdaten enthalten, wie im
 
 Beispiel:
 MAIL_PORT=587  
@@ -48,13 +51,14 @@ MAIL_PASSWORD=your_password
 MAIL_DEFAULT_SENDER=your_email@example.com  
 
 BAA_API_KEY=your_api_key  
-MONGO_URI=mongodb+srv://dein_uri 
+MONGO_URI=mongodb+srv://dein_uri
 
 📄 Eine .env.example liegt im Projekt bereit und dient als Vorlage.
 
 🚀 Backend starten:
 
 Du startest den Flask-Server im backend-Ordner mit folgendem Befehl:
+
 - python server.py
 
 📡 Der Server läuft dann unter http://127.0.0.1:5000 (oder wie in server.py konfiguriert).

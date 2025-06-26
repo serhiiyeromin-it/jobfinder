@@ -1,4 +1,4 @@
-name: Frontend Lint Check
+name: Frontend Lint + Autofix
 
 on:
   push: {}
@@ -6,13 +6,13 @@ on:
 
 jobs:
   lint-frontend:
-    name: "⚛️ Frontend: eslint + prettier --check"
+    name: "⚛️ Frontend: ESLint + Prettier (Auto-Fix)"
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup Node.js 18
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
@@ -21,10 +21,13 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Run ESLint
+      - name: Run ESLint (auto-fix)
         working-directory: frontend
-        run: npm run lint
+        run: npm run lint:fix
 
-      - name: Run Prettier Check
+      - name: Run Prettier (auto-fix)
         working-directory: frontend
-        run: npm run format:check
+        run: npm run format:fix
+
+      - name: Show diff after auto-fix
+        run: git diff || true

@@ -1,0 +1,28 @@
+name: Backend Lint + Autofix
+
+on:
+  push: {}
+  pull_request: {}
+
+jobs:
+  lint-backend:
+    name: "🐍 Backend: flake8 + black"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install flake8 and black
+        run: pip install flake8 black
+
+      - name: Run flake8
+        run: flake8 backend/
+
+      - name: Run black with check and fix
+        run: |
+          black backend/ --check || black backend/

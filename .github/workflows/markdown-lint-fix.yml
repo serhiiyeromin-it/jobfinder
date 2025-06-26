@@ -1,0 +1,33 @@
+name: Markdown Lint + Autofix
+
+on:
+  push: {}
+  pull_request: {}
+
+jobs:
+  lint-markdown:
+    name: "📝 Markdownlint + Autofix"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install markdownlint-cli2
+        run: npm install --no-save markdownlint-cli2
+
+      - name: Run markdownlint with autofix
+        run: |
+          npx markdownlint-cli2 \
+            README.md \
+            backend/README.md \
+            frontend/README.md \
+            --fix
+
+      - name: Show diff after fix (debug only)
+        run: |
+          git diff || true
