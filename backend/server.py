@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from crawl_stepstone import crawl_stepstone
 from mongodb_connect import collection, search_alerts_collection, search_results_collection
 from bson.objectid import ObjectId
+from bson.errors import InvalidId
 from apscheduler.schedulers.background import BackgroundScheduler
 import datetime
 from crawler_api_baa import crawl_arbeitsagentur
@@ -107,13 +108,22 @@ def jobsuchen_baa():
 @app.route('/update_bookmark', methods=['POST'])
 def update_bookmark():
     data = request.json
-    job_id = data.get('_id')
-    bookmark_status = data.get('bookmark')
+    job_id = data.get('_id')  # Job-ID aus den Daten
+    bookmark_status = data.get('bookmark')  # Bookmark-Status aus den Daten
 
-    collection.update_one(
-        {'_id': ObjectId(job_id)},
-        {'$set': {'bookmark': bookmark_status}}
-    )
+    if not job_id or bookmark_status is None:
+        return jsonify({'error': 'Job-ID und Bookmark-Status müssen angegeben werden.'}), 400
+        
+    if ObjectId.is_valid(job_id):
+        query = {'_id': ObjectId(job_id)}
+    else:
+        query = {'_id': job_id}  # Wenn es sich nicht um eine gültige ObjectId handelt, verwenden wir den String direkt
+
+    result = collection.update_one(query, {'$set': {'bookmark': bookmark_status}})
+
+    if result.matched_count != 1:
+        return jsonify({'error': 'Job nicht gefunden.'}), 404
+    
     return jsonify({'success': True})
 
 @app.route('/bookmarked_jobs', methods=['GET'])
@@ -123,6 +133,7 @@ def get_bookmarked_jobs():
         job['_id'] = str(job['_id'])
     print(f"{len(jobs)} bookmarked Jobs aus MongoDB abgerufen.")
     return jsonify(jobs)
+
 @app.route('/update_search_alert/<string:id>', methods=['POST'])
 def update_search_alert(id):
     data = request.json
