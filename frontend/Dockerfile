@@ -1,15 +1,13 @@
-# Build-Stage
 FROM node:20-alpine AS builder
 WORKDIR /app
-COPY package*.json ./
+COPY package*.json .
 RUN npm ci
 COPY . .
-RUN npm run build   # legt resultate in /app/dist ab
+RUN npm run build
 
-# Runtime-Stage
 FROM node:20-alpine
 WORKDIR /app
+RUN npm install -g serve
 COPY --from=builder /app/dist ./dist
-RUN npm install -g serve           # leichtgewichtiger Static-Server
-EXPOSE 80
-CMD ["serve", "-s", "dist", "-l", "80"]
+EXPOSE 5173
+CMD ["serve", "-s", "dist", "-l", "5173"]
