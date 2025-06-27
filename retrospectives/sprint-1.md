@@ -1,5 +1,3 @@
-📄 
-retrospectives/sprint-1.md
 # 🌀 Sprint-Retrospektive – Sprint 1 (16.–23. Juni 2025)
 
 **Projekt:** Project-Night-Crawler  
@@ -17,7 +15,7 @@ retrospectives/sprint-1.md
 - GitHub Projects & Issues werden aktiv genutzt (Board, Labels, Status)
 - README.md für Backend wurde sauber dokumentiert
 - Zusammenarbeit im Team intensiv, lösungsorientiert und unterstützend
-- Eigenverantwortung stark gelebt 
+- Eigenverantwortung stark gelebt
 
 ---
 
