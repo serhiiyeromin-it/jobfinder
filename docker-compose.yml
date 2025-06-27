@@ -6,4 +6,4 @@ services:
   frontend:
     image: ghcr.io/${IMAGE_NAMESPACE}/nightcrawler-frontend:latest
     ports:
-      - "5173:80"
+      - "5173:5173"
