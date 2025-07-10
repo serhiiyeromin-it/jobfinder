@@ -93,7 +93,7 @@ def jobsuchen():
             {**job, '_id': str(job['_id'])}
             for job in collection.find(
                 {"bookmark": False},
-                {'title': 1, 'company': 1, 'link': 1, 'bookmark': 1}
+                {'title': 1, 'company': 1, 'link': 1, 'bookmark': 1, '_id': 1}
             )
         ]
         print(f"{len(jobs)} Jobs aus MongoDB abgerufen.")
