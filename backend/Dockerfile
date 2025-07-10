@@ -1,15 +1,11 @@
-# 1. Basis-Image
-FROM python:3.11-slim
+FROM python:3.11-slim-bookworm
 
-# 2. Arbeitsverzeichnis
 WORKDIR /app
 
-# 3. Abhängigkeiten kopieren & installieren
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 4. Restlichen Code kopieren
 COPY . .
 
-# 5. Standard-Kommando
+EXPOSE 3050
 CMD ["python", "server.py"]

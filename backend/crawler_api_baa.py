@@ -1,22 +1,18 @@
 import requests
 import os
 import uuid
-from pymongo import MongoClient
-from dotenv import load_dotenv
+from mongodb_connect import collection
 
-load_dotenv()  # .env-Datei laden
-
-# MongoDB-Verbindung herstellen
-client = MongoClient(os.getenv("MONGO_URI"))
-db = client['job_database']
-collection = db['jobs']
+# Sicherheitsprüfung für API Key
+api_key = os.getenv("BAA_API_KEY")
+if not api_key:
+    raise RuntimeError("❌ BAA_API_KEY ist nicht gesetzt!")
 
 # Arbeitsagentur API-Konfiguration
 API_URL = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/jobs"
 HEADERS = {
-    "X-API-Key": os.getenv("BAA_API_KEY")  # Dein persönlicher API-Schlüssel
+    "X-API-Key": api_key  # Dein persönlicher API-Schlüssel
 }
-
 
 def crawl_arbeitsagentur(keywords, location, radius, collection=collection):
     # Crawler für die Arbeitsagentur-API

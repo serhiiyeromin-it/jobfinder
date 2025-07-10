@@ -1,9 +1,30 @@
 services:
+  mongo:
+    image: mongo:7
+    container_name: nightcrawler-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
   backend:
-    image: ghcr.io/${IMAGE_NAMESPACE}/nightcrawler-backend:latest
+    image: ${dockerhub_username}/nightcrawler-backend:latest
+    container_name: nightcrawler-backend
     ports:
       - "3050:3050"
+    environment:
+      - MONGO_URI=${MONGO_URI}
+      - BAA_API_KEY=${BAA_API_KEY}
+    depends_on:
+      - mongo
+
   frontend:
-    image: ghcr.io/${IMAGE_NAMESPACE}/nightcrawler-frontend:latest
+    image: ${dockerhub_username}/nightcrawler-frontend:latest
+    container_name: nightcrawler-frontend
     ports:
       - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  mongo-data:
