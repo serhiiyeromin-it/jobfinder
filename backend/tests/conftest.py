@@ -1,9 +1,14 @@
 from unittest import mock
+import os
 import pytest
 import mongomock
 
 with mock.patch("pymongo.MongoClient", new=lambda *a, **k: mongomock.MongoClient()):
     from server import collection as jobs_collection
+
+@pytest.fixture(autouse=True)
+def set_env_vars():
+    os.environ["BAA_API_KEY"] = "fake-key"
 
 @pytest.fixture()
 def client():

@@ -1,22 +1,16 @@
 import requests
 import os
 import uuid
-from pymongo import MongoClient
-from dotenv import load_dotenv
-
-load_dotenv()  # .env-Datei laden
-
-# MongoDB-Verbindung herstellen
-client = MongoClient(os.getenv("MONGO_URI"))
-db = client['job_database']
-collection = db['jobs']
+from mongodb_connect import collection
 
 # Arbeitsagentur API-Konfiguration
 API_URL = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/jobs"
-HEADERS = {
-    "X-API-Key": os.getenv("BAA_API_KEY")  # Dein persönlicher API-Schlüssel
-}
 
+def get_headers():
+    api_key = os.getenv("BAA_API_KEY")
+    if not api_key:
+        raise RuntimeError("❌ BAA_API_KEY ist nicht gesetzt!")
+    return {"X-API-Key": api_key}
 
 def crawl_arbeitsagentur(keywords, location, radius, collection=collection):
     # Crawler für die Arbeitsagentur-API
@@ -49,7 +43,7 @@ def crawl_arbeitsagentur(keywords, location, radius, collection=collection):
 
         try:
             response = requests.get(
-                API_URL, headers=HEADERS, params=params, timeout=30
+                API_URL, headers=get_headers(), params=params, timeout=30
             )  # API-Anfrage senden
             response.raise_for_status()  # Fehler bei der Anfrage auslösen
             data = response.json()
@@ -78,7 +72,7 @@ def crawl_arbeitsagentur(keywords, location, radius, collection=collection):
             all_new_jobs.extend(new_jobs)
 
         except Exception as e:
-            if response.status_code == 403:
+            if isinstance(e, requests.HTTPError) and response.status_code == 403:
                 print("❌ Zugriff verweigert. Bitte überprüfe deinen API-Schlüssel.")
             print(f"Fehler beim Abrufen der API-Daten: {e}")
             continue
