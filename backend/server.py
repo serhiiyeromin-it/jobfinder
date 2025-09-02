@@ -10,7 +10,7 @@ from mongodb_connect import (
 )
 from bson.objectid import ObjectId
 from apscheduler.schedulers.background import BackgroundScheduler
-import datetime
+from datetime import datetime, UTC
 from crawler_api_baa import crawl_arbeitsagentur
 
 load_dotenv()  # Lädt die Umgebungsvariablen aus der .env-Datei
@@ -39,9 +39,10 @@ except Exception:
 
 def send_email(to_email, subject, body):
     try:
-        msg = Message(subject, recipients=[to_email], body=body)
-        mail.send(msg)
-        print(f"Email erfolgreich gesendet an {to_email}.")
+        with app.app_context():
+            msg = Message(subject, recipients=[to_email], body=body)
+            mail.send(msg)
+            print(f"Email erfolgreich gesendet an {to_email}.")
     except Exception as e:
         print(f"Fehler beim Senden der Email: {e}")
 
@@ -235,59 +236,84 @@ def delete_search_alert(id):
     else:
         return jsonify({'error': 'Suchauftrag nicht gefunden'}), 404
 
-
 scheduler = BackgroundScheduler()
 
-
 def execute_search_alerts():
-    alerts = list(search_alerts_collection.find())
-    print(f"[{datetime.datetime.now()}] Ausführung der gespeicherten Suchaufträge gestartet.")
+    # Job bekommt einen eigenen App-Kontext (z. B. wenn via Thread/Timer aufgerufen)
+    with app.app_context():
+        alerts = list(search_alerts_collection.find())
+        print(f"[{datetime.now(UTC)}] Ausführung der gespeicherten Suchaufträge gestartet.")
 
-    for alert in alerts:
-        keywords = alert.get('keywords', [])
-        location = alert.get('location', '')
-        radius = int(alert.get('radius', 30))
-        email = alert.get('email', '')
+        for alert in alerts:
+            keywords = alert.get('keywords', [])
+            location = alert.get('location', '')
+            radius = int(alert.get('radius', 30))
+            email = alert.get('email', '')
 
 # --- Arbeitsagentur-Call (keine Normalisierung) ---
-        try:
-            # 4. Parameter explizit auf None -> Crawler speichert NICHT in 'collection'
-            raw_jobs = crawl_arbeitsagentur(keywords, location, radius, None) or []
-        except Exception as e:
-            print(f"BAA-Crawl fehlgeschlagen für Alert {alert['_id']}: {e}")
-            continue
-
-        # Felder 1:1 übernehmen, nur Zuordnung + Timestamp setzen
-        for j in raw_jobs:
-            j['search_alert_id'] = str(alert['_id'])
-            j['timestamp'] = datetime.datetime.utcnow()
-
-        # Dedupe pro Alert – genau wie bei dir, nur mit get() falls 'link' fehlt
-        existing_links = {
-            d.get('link') for d in search_results_collection.find(
-                {'search_alert_id': str(alert['_id'])},
-                {'link': 1, '_id': 0}
-            )
-        }
-        seen = set()
-        unique_jobs = []
-        for j in raw_jobs:
-            lnk = (j.get('link') or "").strip()
-            if not lnk:
-                continue  # leere Links nicht speichern (sonst knallt der Unique-Index)
-            if lnk in existing_links or lnk in seen:
-                continue
-            seen.add(lnk)
-            unique_jobs.append(j)
-
-        if unique_jobs:
             try:
-                search_results_collection.insert_many(unique_jobs, ordered=False)
-                print(f"{len(unique_jobs)} neue Ergebnisse für Suchauftrag {alert['_id']} gespeichert.")
+                # 4. Parameter explizit auf None -> Crawler speichert NICHT in 'collection'
+                raw_jobs = crawl_arbeitsagentur(keywords, location, radius, None) or []
             except Exception as e:
-                print(f"insert_many fehlgeschlagen für Alert {alert['_id']}: {e}")
-        else:
-            print(f"0 neue Ergebnisse für Suchauftrag {alert['_id']} (evtl. alles schon vorhanden).")
+                print(f"BAA-Crawl fehlgeschlagen für Alert {alert['_id']}: {e}")
+                continue
+
+            # Felder 1:1 übernehmen, nur Zuordnung + Timestamp setzen
+            for j in raw_jobs:
+                j['search_alert_id'] = str(alert['_id'])
+                j['timestamp'] = datetime.now(UTC)
+
+            # Dedupe pro Alert – genau wie bei dir, nur mit get() falls 'link' fehlt
+            existing_links = {
+                d.get('link') for d in search_results_collection.find(
+                    {'search_alert_id': str(alert['_id'])},
+                    {'link': 1, '_id': 0}
+                )
+            }
+            seen = set()
+            unique_jobs = []
+            for j in raw_jobs:
+                lnk = (j.get('link') or "").strip()
+                if not lnk:
+                    continue  # leere Links nicht speichern (sonst knallt der Unique-Index)
+                if lnk in existing_links or lnk in seen:
+                    continue
+                seen.add(lnk)
+                unique_jobs.append(j)
+
+            if unique_jobs:
+                try:
+                    search_results_collection.insert_many(unique_jobs, ordered=False)
+                    print(f"{len(unique_jobs)} neue Ergebnisse für Suchauftrag {alert['_id']} gespeichert.")
+                    # --- E-Mail-Benachrichtigung ---
+                    if email:
+                        try:
+                            subject = f"[Night Crawler] {len(unique_jobs)} neue Jobs für deinen Alert"
+                            # knapper Plaintext-Body: Titel – Firma – Quelle – Link (max 10 Zeilen)
+                            lines = []
+                            for j in unique_jobs[:10]:
+                                title = j.get('title') or ''
+                                company = j.get('company') or ''
+                                source = j.get('source') or ''
+                                link = j.get('link') or ''
+                                lines.append(f"- {title} bei {company} ({source})\n  {link}")
+                            more = len(unique_jobs) - len(lines)
+                            if more > 0:
+                                lines.append(f"... und {more} weitere. Öffne die App für alle Ergebnisse.")
+                            body = (
+                                f"Hallo,\n\n"
+                                f"es gibt {len(unique_jobs)} neue Ergebnisse für deinen Suchauftrag:\n"
+                                f"Keywords: {', '.join(keywords) or '-'} | Ort: {location or '-'} | Radius: {radius} km\n\n"
+                                + "\n".join(lines) + "\n\n"
+                                "— Dein Project Night Crawler"
+                            )
+                            send_email(email, subject, body)
+                        except Exception as e:
+                            print(f"E-Mail-Versand fehlgeschlagen für Alert {alert['_id']}: {e}")
+                except Exception as e:
+                    print(f"insert_many fehlgeschlagen für Alert {alert['_id']}: {e}")
+            else:
+                print(f"0 neue Ergebnisse für Suchauftrag {alert['_id']} (evtl. alles schon vorhanden).")
 
 scheduler.add_job(execute_search_alerts, 'interval', minutes=3)
 scheduler.start()

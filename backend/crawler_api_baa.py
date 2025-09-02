@@ -6,6 +6,12 @@ from mongodb_connect import collection
 # Arbeitsagentur API-Konfiguration
 API_URL = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/jobs"
 
+# Fallback HTTP headers for requests (can be overridden/imported later)
+DEFAULT_HEADERS = {
+    "User-Agent": "Mozilla/5.0",
+    "Accept": "*/*",
+}
+
 def _fetch_detail_link(refnr: str | None = None, hash_id: str | None = None, session: requests.Session | None = None) -> str | None:
     if not session:
         session = requests.Session()
@@ -17,7 +23,7 @@ def _fetch_detail_link(refnr: str | None = None, hash_id: str | None = None, ses
         return None
 
     try:
-        r = session.get(details_url, headers=HEADERS, timeout=10)
+        r = session.get(details_url, headers=DEFAULT_HEADERS, timeout=10)
         if r.ok:
             data = r.json() if r.headers.get("content-type","").startswith("application/json") else {}
             # Häufige Felder für den externen Bewerbungs-/Anzeigen-Link:
