@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API_BASE_URL = "http://localhost:3050";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3050";
 
 export default function BookmarkedJobs() {
   const [jobs, setJobs] = useState([]);
@@ -13,7 +13,7 @@ export default function BookmarkedJobs() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/bookmarked_jobs`);
+        const res = await fetch(`${API_URL}/bookmarked_jobs`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         setJobs(Array.isArray(data) ? data : []);
@@ -28,7 +28,7 @@ export default function BookmarkedJobs() {
 
   const removeBookmark = async (jobId) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/update_bookmark`, {
+      const res = await fetch(`${API_URL}/update_bookmark`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ _id: jobId, bookmark: false }),
