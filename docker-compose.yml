@@ -4,25 +4,22 @@ networks:
 
 services:
   backend:
-    image: myapp-backend:local
+    image: mrrobob/nightcrawler-backend:${IMAGE_TAG:-latest}
     container_name: backend
+    pull_policy: always
     ports:
-      - "3050:3050"            # host:container  -> anpassen falls nötig
+      - "3050:3050"
     environment:
       MONGO_URI: ${MONGO_URI}
       BAA_API_KEY: ${BAA_API_KEY}
-    networks:
-      - appnet
+    networks: [appnet]
 
   frontend:
-    image: myapp-frontend:local
+    image: mrrobob/nightcrawler-frontend:${IMAGE_TAG:-latest}
     container_name: frontend
+    pull_policy: always
     ports:
-      - "3000:3000"
+      - "5173:5173"
     environment:
-      # Passe den Variablennamen an dein Frontend an (z. B. VITE_API_URL)
-      API_URL: http://backend:3050
-    depends_on:
-      - backend
-    networks:
-      - appnet
+      VITE_API_URL: http://backend:3050
+    networks: [appnet]
