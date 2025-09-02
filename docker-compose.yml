@@ -1,3 +1,4 @@
+
 services:
   mongo:
     image: mongo:7
@@ -8,7 +9,8 @@ services:
       - mongo-data:/data/db
 
   backend:
-    image: ${dockerhub_username}/nightcrawler-backend:latest
+    build: ./backend
+    image: nightcrawler-backend:latest
     container_name: nightcrawler-backend
     ports:
       - "3050:3050"
@@ -19,7 +21,8 @@ services:
       - mongo
 
   frontend:
-    image: ${dockerhub_username}/nightcrawler-frontend:latest
+    build: ./frontend
+    image: nightcrawler-frontend:latest
     container_name: nightcrawler-frontend
     ports:
       - "5173:5173"
@@ -28,3 +31,4 @@ services:
 
 volumes:
   mongo-data:
+
