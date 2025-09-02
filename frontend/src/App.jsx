@@ -77,7 +77,7 @@ function App() {
           />
           <Route path="/bookmarked" element={<BookmarkedJobs />} />
           <Route path="/search_alerts" element={<SearchAlerts />} />
-          <Route path="/search_results/:alertId" element={<SearchResults />} />
+          <Route path="/search_alert/:alertId" element={<SearchResults />} />
         </Routes>
       </div>
     </Router>

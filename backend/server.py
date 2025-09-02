@@ -28,6 +28,14 @@ app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_USERNAME')
 # Flask-Mail initialisieren
 mail = Mail(app)
 
+try:
+    search_results_collection.create_index(
+        [("search_alert_id", 1), ("link", 1)],
+        unique=True,
+        name="uniq_alert_link"
+    )
+except Exception:
+    pass
 
 def send_email(to_email, subject, body):
     try:
@@ -197,6 +205,11 @@ def save_search():
     }
     result = search_alerts_collection.insert_one(search_alerts_data)
     search_alerts_data['_id'] = str(result.inserted_id)
+    # optional: direkt initiale Ergebnisse holen & speichern
+    try:
+        execute_search_alerts()  # verarbeitet alle Alerts; minimal & genügt hier
+    except Exception as e:
+        print("Initialer Autoscan nach save_search fehlgeschlagen:", e)
     return jsonify({'success': True, 'search_alert': search_alerts_data})
 
 
@@ -227,93 +240,56 @@ scheduler = BackgroundScheduler()
 
 
 def execute_search_alerts():
-    with app.app_context():
-        alerts = list(search_alerts_collection.find())
-        print(
-            f"[{datetime.datetime.now()}] Starte Ausführung für "
-            f"{len(alerts)} gespeicherte Suchaufträge."
-        )
+    alerts = list(search_alerts_collection.find())
+    print(f"[{datetime.datetime.now()}] Ausführung der gespeicherten Suchaufträge gestartet.")
 
-        for alert in alerts:
-            alert_id_str = str(alert['_id'])
-            keywords = alert.get('keywords', [])
-            location = alert.get('location', '')
-            radius = int(alert.get('radius', '30'))
-            email = alert.get('email', '')
+    for alert in alerts:
+        keywords = alert.get('keywords', [])
+        location = alert.get('location', '')
+        radius = int(alert.get('radius', 30))
+        email = alert.get('email', '')
 
-            if not email:
-                print(
-                    f"Suchauftrag {alert_id_str} hat keine E-Mail-Adresse. "
-                    f"Überspringe."
-                )
+# --- Arbeitsagentur-Call (keine Normalisierung) ---
+        try:
+            # 4. Parameter explizit auf None -> Crawler speichert NICHT in 'collection'
+            raw_jobs = crawl_arbeitsagentur(keywords, location, radius, None) or []
+        except Exception as e:
+            print(f"BAA-Crawl fehlgeschlagen für Alert {alert['_id']}: {e}")
+            continue
+
+        # Felder 1:1 übernehmen, nur Zuordnung + Timestamp setzen
+        for j in raw_jobs:
+            j['search_alert_id'] = str(alert['_id'])
+            j['timestamp'] = datetime.datetime.utcnow()
+
+        # Dedupe pro Alert – genau wie bei dir, nur mit get() falls 'link' fehlt
+        existing_links = {
+            d.get('link') for d in search_results_collection.find(
+                {'search_alert_id': str(alert['_id'])},
+                {'link': 1, '_id': 0}
+            )
+        }
+        seen = set()
+        unique_jobs = []
+        for j in raw_jobs:
+            lnk = (j.get('link') or "").strip()
+            if not lnk:
+                continue  # leere Links nicht speichern (sonst knallt der Unique-Index)
+            if lnk in existing_links or lnk in seen:
                 continue
+            seen.add(lnk)
+            unique_jobs.append(j)
 
-            print(
-                f"Führe Suchauftrag aus für: {keywords} in {location} "
-                f"({radius}km)"
-            )
+        if unique_jobs:
+            try:
+                search_results_collection.insert_many(unique_jobs, ordered=False)
+                print(f"{len(unique_jobs)} neue Ergebnisse für Suchauftrag {alert['_id']} gespeichert.")
+            except Exception as e:
+                print(f"insert_many fehlgeschlagen für Alert {alert['_id']}: {e}")
+        else:
+            print(f"0 neue Ergebnisse für Suchauftrag {alert['_id']} (evtl. alles schon vorhanden).")
 
-            print(
-                f"-> Crawle bei Arbeitsagentur für Suchauftrag {alert_id_str}..."
-            )
-            new_jobs_baa = crawl_arbeitsagentur(
-                keywords, location, radius, collection
-            )
-
-            all_new_jobs = new_jobs_baa
-            print(
-                f"-> Insgesamt {len(all_new_jobs)} Jobs gefunden."
-            )
-
-            existing_links = {
-                job['link']
-                for job in search_results_collection.find(
-                    {'search_alert_id': alert_id_str},
-                    {'link': 1}
-                )
-            }
-
-            unique_new_jobs = [
-                job for job in all_new_jobs
-                if job.get('link') and job['link'] not in existing_links
-            ]
-
-            if unique_new_jobs:
-                print(
-                    f"Gefunden: {len(unique_new_jobs)} wirklich neue Jobs für "
-                    f"Suchauftrag {alert_id_str}."
-                )
-
-                for job in unique_new_jobs:
-                    job['search_alert_id'] = alert_id_str
-                    job['timestamp'] = datetime.datetime.now()
-
-                search_results_collection.insert_many(unique_new_jobs)
-
-                subject = (
-                    f"Neue Jobangebote für deine Suche: {', '.join(keywords)}"
-                )
-
-                body = (
-                    f"Hallo,\n\nes wurden {len(unique_new_jobs)} neue Stellen "
-                    f"für deinen Suchauftrag gefunden:\n\n"
-                )
-                for job in unique_new_jobs:
-                    body += f"- Titel: {job.get('title', 'N/A')}\n"
-                    body += f"  Firma: {job.get('company', 'N/A')}\n"
-                    body += f"  Quelle: {job.get('source', 'N/A')}\n"
-                    body += f"  Link: {job.get('link', 'N/A')}\n\n"
-
-                body += "Viel Erfolg bei deiner Bewerbung!\n\nDein Night-Crawler"
-
-                send_email(email, subject, body)
-            else:
-                print(
-                    f"Keine neuen Jobs für Suchauftrag {alert_id_str} gefunden."
-                )
-
-
-scheduler.add_job(execute_search_alerts, 'interval', minutes=1)
+scheduler.add_job(execute_search_alerts, 'interval', minutes=3)
 scheduler.start()
 
 
