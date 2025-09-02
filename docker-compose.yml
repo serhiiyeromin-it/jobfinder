@@ -4,25 +4,23 @@ networks:
 
 services:
   backend:
-    image: mrrobob/nightcrawler-backend:latest
+    image: mrrobob/nightcrawler-backend:${IMAGE_TAG:-latest}
     container_name: backend
+    pull_policy: always
     ports:
-      - "3050:3050"            # host:container  -> anpassen falls nötig
+      - "3050:3050"
     environment:
       MONGO_URI: ${MONGO_URI}
       BAA_API_KEY: ${BAA_API_KEY}
-    networks:
-      - appnet
+    networks: [appnet]
 
   frontend:
-    image: mrrobob/nightcrawler-frontend:latest
+    image: mrrobob/nightcrawler-frontend:${IMAGE_TAG:-latest}
     container_name: frontend
+    pull_policy: always
     ports:
       - "5173:5173"
     environment:
       VITE_API_URL: http://backend:3050
-    depends_on:
-      - backend
-      
-    networks:
-      - appnet
+    networks: [appnet]
+    
