@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3050";
+
 // Suchaufträge-Komponente
 function SearchAlerts() {
   const [searchAlerts, setSearchAlerts] = useState([]);
@@ -8,7 +10,7 @@ function SearchAlerts() {
 
   useEffect(() => {
     // API-Endpunkt zum Abrufen der Suchaufträge
-    fetch("http://localhost:3050/search_alerts")
+    fetch(`${API_URL}/search_alerts`)
       .then((res) => res.json())
       .then((data) => setSearchAlerts(data))
       .catch((err) =>
@@ -25,12 +27,9 @@ function SearchAlerts() {
     if (e) e.stopPropagation();
     try {
       // API-Endpunkt zum Löschen eines Suchauftrags
-      const res = await fetch(
-        `http://localhost:3050/delete_search_alert/${id}`,
-        {
-          method: "DELETE",
-        },
-      );
+      const res = await fetch(`${API_URL}/delete_search_alert/${id}`, {
+        method: "DELETE",
+      });
       if (!res.ok) throw new Error("Löschen fehlgeschlagen");
       setSearchAlerts((prev) => prev.filter((a) => a._id !== id));
     } catch (err) {
