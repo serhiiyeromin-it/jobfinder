@@ -189,41 +189,84 @@ Siehe `docker-compose.yml` (Ports `3050` Backend, `5173` Frontend).
 Im Repo: `all-in-one.yaml` mit Namespace, Secrets, Deployments und Services für MongoDB, Backend & Frontend.  
 Beispiele:
 
-   ```bash
-   npm run dev
-   ```
-
-   Die Anwendung ist anschließend unter `http://localhost:5173` erreichbar.
+```bash
+kubectl apply -f all-in-one.yaml
+kubectl delete all --all -n nightcrawler
+```
 
 ---
 
-## Repository-Strategie
+## Projektstruktur
 
-### GitHub Flow
+```text
+.
+├── backend/                 # Flask-API, Crawler, Tests
+│   ├── server.py
+│   ├── requirements.txt
+│   ├── mongodb_connect.py
+│   ├── crawler_api_baa.py
+│   └── tests/
+├── frontend/                # React/Vite SPA
+│   ├── src/
+│   ├── package.json
+│   └── vite.config.js
+├── docker-compose.yml
+├── all-in-one.yaml          # Kubernetes Manifeste (Namespace, Secrets, Deployments, Services)
+├── .github/workflows/       # CI/CD
+├── .env.example
+└── README.md
+```
 
-1. **`main`**
-   - Immer deploy-bereit
-   - Änderungen nur über Pull Requests (PRs)
+---
 
-2. **Feature-Branches**
-   - Kurzlebig (idealerweise < 1–2 Tage)
-   - Namensschema: `feature/...`, `bugfix/...`, `chore/...`
-     - Beispiele: `feature/login-form`, `bugfix/timeout-error`
+## FAQ
 
-3. **Commit Messages**
-   - Format: `type(scope): beschreibung`
-     - Beispiel: `feat(backend): add health endpoint`
+**Was crawlt der Night Crawler?**  
+Aktuell u. a. die Jobbörse der **Bundesagentur für Arbeit** via API; Erweiterungen (z. B. StepStone) sind vorgesehen.
 
-4. **Labels & Milestones**
-   - GitHub Issues mit Labels wie `bug`, `enhancement`
-   - Meilensteine strukturieren Releases
+**Wo werden Daten gespeichert?**  
+In **MongoDB** (Sammlungen für Alerts, Ergebnisse, Bookmarks; eindeutige Indizes zur Duplikatvermeidung).
 
-5. **Pull Requests**
-   - Mindestens ein Reviewer erforderlich
-   - Automatisierte Checks müssen erfolgreich sein
+**Wie bekomme ich E‑Mails?**  
+Mail‑Server‑Daten in ENV setzen (`MAIL_*`). Das Backend nutzt Flask‑Mail.
 
-6. **Deployment**
-   - Jeder Merge in `main` triggert CI/CD → automatisiertes Deployment
+**Kann ich die Suche zeitgesteuert laufen lassen?**  
+Ja, über **APScheduler** (siehe Backend‑Code). Alternativ externe Cron/Workflows.
 
-## kubectl delete all --all -n nightcrawler / Kubernetes Cleanup
-## kubectl apply -f all-in-one.yaml / Deployment
+---
+
+## Troubleshooting
+
+- **Backend startet nicht / 5000 blockiert**  
+  Prüfe, ob Port frei ist; ggf. `FLASK_RUN_PORT` oder Code‑Port ändern.
+
+- **MongoDB‑Verbindung schlägt fehl**  
+  `MONGO_URI` prüfen (Host/Port/Auth). Teste mit `mongosh`/`mongo` CLI.
+
+- **CORS‑Fehler im Browser**  
+  Stelle sicher, dass `Flask‑CORS` aktiviert ist und `VITE_API_URL` korrekt gesetzt ist.
+
+- **Docker Compose: Frontend erreicht Backend nicht**  
+  In Compose kommuniziert das Frontend mit `http://backend:3050`. Stelle sicher, dass `VITE_API_URL` entsprechend gesetzt ist (ENV oder Build‑Zeit).
+
+- **BAA‑API liefert keine Ergebnisse**  
+  `BAA_API_KEY` prüfen, Request‑Parameter (Keywords/Ort/Radius) validieren, Logging checken.
+
+- **GitHub Actions: Required Checks fehlen**  
+  Workflows müssen einmal laufen, damit sie unter **Settings → Branches → Protection Rules** auswählbar sind.
+
+---
+
+## Roadmap
+
+- Mehr Datenquellen (StepStone reaktivieren, weitere Portale)
+- User‑Accounts & persistente Einstellungen
+- UI‑Verbesserungen (Filter, Paginierung, Export)
+- Alert‑Scheduling im UI konfigurierbar
+- Docker‑Builds für **multi‑arch** Images
+
+---
+
+## Lizenz
+
+© {2025} – Roman Smirnov, Project Night Crawler. (PolyForm Noncommercial License 1.0.0)
