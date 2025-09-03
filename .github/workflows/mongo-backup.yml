@@ -34,4 +34,9 @@ jobs:
 
       - name: 🧹 Container stoppen
         run: docker-compose down
-
+      
+      - name: 📤 Загрузить бэкап как артефакт
+        uses: actions/upload-artifact@v3
+        with:
+          name: mongo-backup-${{ github.run_id }}
+          path: backups/
