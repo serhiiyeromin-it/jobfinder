@@ -1,3 +1,4 @@
+
 name: MongoDB Backup
 
 on:
@@ -5,22 +6,32 @@ on:
     - cron: '0 2 * * *' # jeden Tag um 2:00 Uhr nachts
   workflow_dispatch:
 
+env:
+  MONGO_URI: ${{ secrets.MONGO_URI }}
+  BAA_API_KEY: ${{ secrets.BAA_API_KEY }}
+  PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+
 jobs:
   backup:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout des Repository
+      - name: 📦 Repository klonen
         uses: actions/checkout@v3
 
-      - name: Docker Compose installieren
+      - name: 🐳 Docker Compose installieren
         run: sudo apt-get update && sudo apt-get install docker-compose -y
 
-      - name: MongoDB starten
+      - name: 🚀 MongoDB starten
         run: docker-compose up -d nightcrawler-mongo
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          BAA_API_KEY: ${{ secrets.BAA_API_KEY }}
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
 
-      - name: Backup durchführen
+      - name: 🛡️ Backup durchführen
         run: bash backup-mongo.sh
 
-      - name: Container stoppen
+      - name: 🧹 Container stoppen
         run: docker-compose down
+
