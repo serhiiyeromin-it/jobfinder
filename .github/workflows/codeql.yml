@@ -8,6 +8,10 @@ on:
   schedule:
     - cron: '0 0 * * 0' # wöchentlich
 
+permissions:
+  contents: read
+  security-events: write
+
 jobs:
   analyze:
     name: CodeQL Analyze
@@ -23,4 +27,4 @@ jobs:
           languages: javascript, python
 
       - name: 🔍 Code-Analyse
-        uses: github/codeql-action/analyze@v2
+        uses: github/codeql-action/analyze
