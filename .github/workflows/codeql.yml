@@ -1,4 +1,4 @@
-name: "CodeQL"
+name: CodeQL
 
 on:
   push:
@@ -10,11 +10,17 @@ on:
 
 jobs:
   analyze:
-    name: Analyze
+    name: CodeQL Analyze
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
-      - uses: github/codeql-action/init@v2
+      - name: 📦 Repository klonen
+        uses: actions/checkout@v3
+
+      - name: 🧠 Code-Analyse
+        uses: github/codeql-action/init@v2
         with:
-          languages: javascript
-      - uses: github/codeql-action/analyze@v2
+          languages: javascript, python
+
+      - name: 🔍 Code-Analyse
+        uses: github/codeql-action/analyze@v2

@@ -75,3 +75,5 @@ Das Projekt basiert auf modernen Webtechnologien und bewährten Bibliotheken, um
 
 ## kubectl delete all --all -n nightcrawler / Kubernetes Cleanup
 ## kubectl apply -f all-in-one.yaml / Deployment
+## ./backups/mongo-YYYY-MM-DD_HH-MM/ / Backups überprüfen
+## ls ./backups/mongo-YYYY-MM-DD_HH-MM/dump
