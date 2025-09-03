@@ -40,3 +40,4 @@ jobs:
         with:
           name: mongo-backup-${{ github.run_id }}
           path: backups/
+          retention-days: 7
