@@ -17,7 +17,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install docker-compose -y
 
       - name: MongoDB starten
-        run: docker-compose up -d mongo
+        run: docker-compose up -d nightcrawler-mongo
 
       - name: Backup durchführen
         run: bash backup-mongo.sh

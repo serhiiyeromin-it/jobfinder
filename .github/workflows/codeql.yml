@@ -27,4 +27,5 @@ jobs:
           languages: javascript, python
 
       - name: 🔍 Code-Analyse
-        uses: github/codeql-action/analyze
+        uses: github/codeql-action/analyze@v2
+
