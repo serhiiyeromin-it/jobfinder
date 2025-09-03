@@ -11,7 +11,6 @@ from mongodb_connect import (
 from bson.objectid import ObjectId
 from apscheduler.schedulers.background import BackgroundScheduler
 import datetime
-import os
 from crawler_api_baa import crawl_arbeitsagentur
 
 load_dotenv()  # Lädt die Umgebungsvariablen aus der .env-Datei
