@@ -72,3 +72,6 @@ Das Projekt basiert auf modernen Webtechnologien und bewährten Bibliotheken, um
 
 6. **Deployment**
    - Jeder Merge in `main` triggert CI/CD → automatisiertes Deployment
+
+## kubectl delete all --all -n nightcrawler / Kubernetes Cleanup
+## kubectl apply -f all-in-one.yaml / Deployment

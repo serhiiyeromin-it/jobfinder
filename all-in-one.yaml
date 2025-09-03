@@ -1,0 +1,192 @@
+# Объединённый all-in-one.yaml для nightcrawler (mongo + backend + frontend)
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nightcrawler
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+  namespace: nightcrawler
+type: Opaque
+stringData:
+  BAA_API_KEY: "jobboerse-jobsuche"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: nightcrawler
+data:
+  MONGO_HOST: "mongo"
+  MONGO_PORT: "27017"
+  MONGO_DB:   "nightcrawler"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+  namespace: nightcrawler
+spec:
+  selector:
+    app: mongo
+  ports:
+  - name: mongo
+    port: 27017
+    targetPort: 27017
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongo
+  namespace: nightcrawler
+spec:
+  serviceName: mongo
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      containers:
+      - name: mongo
+        image: mongo:7
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+        - name: data
+          mountPath: /data/db
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: nightcrawler
+spec:
+  selector:
+    app: backend
+  ports:
+  - port: 3050
+    targetPort: 3050
+    name: http
+  type: ClusterIP
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: nightcrawler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      initContainers:
+      - name: wait-for-mongo
+        image: mongo:7
+        command: ["bash", "-lc"]
+        args:
+          - >
+            until mongosh "mongodb://$(MONGO_HOST):$(MONGO_PORT)/admin" \
+              --eval 'db.runCommand({ ping: 1 })' >/dev/null 2>&1; do \
+              echo "[init] жду mongo..."; sleep 2; done;
+        env:
+          - name: MONGO_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: app-config
+                key: MONGO_HOST
+          - name: MONGO_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: app-config
+                key: MONGO_PORT
+      containers:
+      - name: backend
+        image: nightcrawler-backend:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3050
+        env:
+        - name: BAA_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: BAA_API_KEY
+        - name: MONGO_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: MONGO_HOST
+        - name: MONGO_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: MONGO_PORT
+        - name: MONGO_DB
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: MONGO_DB
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: nightcrawler
+spec:
+  selector:
+    app: frontend
+  ports:
+  - port: 5173
+    targetPort: 5173
+    name: http
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: nightcrawler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: nightcrawler-frontend:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5173
+
+
+---
+
+

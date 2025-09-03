@@ -1,0 +1,26 @@
+name: MongoDB Backup
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # jeden Tag um 2:00 Uhr nachts
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout des Repository
+        uses: actions/checkout@v3
+
+      - name: Docker Compose installieren
+        run: sudo apt-get update && sudo apt-get install docker-compose -y
+
+      - name: MongoDB starten
+        run: docker-compose up -d mongo
+
+      - name: Backup durchführen
+        run: bash backup-mongo.sh
+
+      - name: Container stoppen
+        run: docker-compose down
