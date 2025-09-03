@@ -6,6 +6,7 @@ load_dotenv()  # Lädt die Umgebungsvariablen aus der .env-Datei
 
 # Deine MongoDB Atlas-Verbindungs-URI befindet sich in der .env-Datei
 uri = os.getenv("MONGO_URI")
+print(f"✅ Mongo URI aus der Umgebung: {uri}")
 
 # Verbindung herstellen
 client = MongoClient(uri)
