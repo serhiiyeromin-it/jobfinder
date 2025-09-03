@@ -11,6 +11,7 @@ from mongodb_connect import (
 from bson.objectid import ObjectId
 from apscheduler.schedulers.background import BackgroundScheduler
 import datetime
+import os
 from crawler_api_baa import crawl_arbeitsagentur
 
 load_dotenv()  # Lädt die Umgebungsvariablen aus der .env-Datei
@@ -329,3 +330,6 @@ def get_search_results(alert_id):
 
 if __name__ == '__main__':  # Startet die Flask-App
     app.run(host='0.0.0.0', port=3050)
+    
+mongo_uri = os.getenv("MONGO_URI")
+print(f"✅ Mongo URI aus der Umgebung: {mongo_uri}")
