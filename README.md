@@ -198,7 +198,7 @@ kubectl delete all --all -n nightcrawler
 
 ## Projektstruktur
 
-```
+```text
 .
 ├── backend/                 # Flask-API, Crawler, Tests
 │   ├── server.py
