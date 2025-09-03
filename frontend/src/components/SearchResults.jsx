@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3050";
+
 function SearchResults() {
   const { alertId } = useParams();
   const [results, setResults] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetch(`http://localhost:3050/get_search_results/${alertId}`)
+    fetch(`${API_URL}/get_search_results/${alertId}`)
       .then((res) => res.json())
       .then((data) => setResults(data))
       .catch((err) =>

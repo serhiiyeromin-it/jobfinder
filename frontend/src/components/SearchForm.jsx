@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3050";
+
 function SearchForm({ onSearch, jobs, handleBookmarkChange }) {
   const [keywords, setKeywords] = useState([]);
   const [location, setLocation] = useState("");
@@ -49,7 +51,7 @@ function SearchForm({ onSearch, jobs, handleBookmarkChange }) {
       return;
     }
 
-    fetch("http://localhost:3050/save_search", {
+    fetch(`${API_URL}/save_search`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ keywords, location, radius, email }),

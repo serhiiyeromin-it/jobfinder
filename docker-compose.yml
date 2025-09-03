@@ -1,34 +1,26 @@
+networks:
+  appnet:
+    driver: bridge
 
 services:
-  mongo:
-    image: mongo:7
-    container_name: nightcrawler-mongo
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
-
   backend:
-    build: ./backend
-    image: nightcrawler-backend:latest
-    container_name: nightcrawler-backend
+    image: mrrobob/nightcrawler-backend:${IMAGE_TAG:-latest}
+    container_name: backend
+    pull_policy: always
     ports:
       - "3050:3050"
     environment:
-      - MONGO_URI=${MONGO_URI}
-      - BAA_API_KEY=${BAA_API_KEY}
-    depends_on:
-      - mongo
+      MONGO_URI: ${MONGO_URI}
+      BAA_API_KEY: ${BAA_API_KEY}
+    networks: [appnet]
 
   frontend:
-    build: ./frontend
-    image: nightcrawler-frontend:latest
-    container_name: nightcrawler-frontend
+    image: mrrobob/nightcrawler-frontend:${IMAGE_TAG:-latest}
+    container_name: frontend
+    pull_policy: always
     ports:
       - "5173:5173"
-    depends_on:
-      - backend
-
-volumes:
-  mongo-data:
-
+    environment:
+      VITE_API_URL: http://backend:3050
+    networks: [appnet]
+    
