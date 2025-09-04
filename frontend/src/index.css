@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+@plugin "@tailwindcss/forms";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  --color-graphite-50:  #F4F6FB;
+  --color-graphite-100: #E6EAF6;
+  --color-graphite-200: #C9D1EC;
+  --color-graphite-300: #AAB7E0;
+  --color-graphite-400: #8D9CCF;
+  --color-graphite-500: #6F80B8;
+  --color-graphite-600: #535F8F;
+  --color-graphite-700: #3A4468;
+  --color-graphite-800: #232B45; /* Border/Dividers */
+  --color-graphite-900: #0E1525; /* Flächen/„Cards“ */
+  --color-graphite-950: #070B16; /* Seitenhintergrund */
+}
+
+:root {
+
+  --tw-color-selection: 165 180 252; /* #A5B4FC in RGB */
+}
+::selection { background: rgb(var(--tw-color-selection) / 0.25); }
