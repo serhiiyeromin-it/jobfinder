@@ -3,6 +3,14 @@ networks:
     driver: bridge
 
 services:
+  nightcrawler-mongo:
+    image: mongo:7
+    container_name: nightcrawler-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks: [appnet]
   backend:
     image: mrrobob/nightcrawler-backend:${IMAGE_TAG:-latest}
     container_name: backend
@@ -23,4 +31,6 @@ services:
     environment:
       VITE_API_URL: http://backend:3050
     networks: [appnet]
+volumes:
+  mongo-data:
     
