@@ -33,6 +33,9 @@ jobs:
         run: |
           docker build -t ${{ secrets.dockerhub_username }}/nightcrawler-frontend:latest ./frontend
           docker push ${{ secrets.dockerhub_username }}/nightcrawler-frontend:latest
+          
+      - name: Install Python dependencies
+        run: pip install -r backend/requirements.txt
 
       - name: Run containers for smoke tests
         run: |

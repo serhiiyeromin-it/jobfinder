@@ -12,8 +12,22 @@ from bson.objectid import ObjectId
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, UTC
 from crawler_api_baa import crawl_arbeitsagentur
+import logging
+from logstash_formatter import LogstashFormatterV1
+from logging.handlers import SocketHandler
 
 load_dotenv()  # Lädt die Umgebungsvariablen aus der .env-Datei
+
+# Logger-Konfiguration für Logstash
+
+logger = logging.getLogger("nightcrawler-backend")
+logger.setLevel(logging.INFO)
+
+handler = SocketHandler("logstash", 5000)  # Name des Logstash-Containers in Docker
+handler.setFormatter(LogstashFormatterV1())
+logger.addHandler(handler)
+
+logger.info("Flask backend gestartet — Logstash-Logging aktiviert")
 
 app = Flask(__name__)  # Erstellt eine Flask-Instanz
 CORS(app)  # Erlaubt Cross-Origin-Requests
