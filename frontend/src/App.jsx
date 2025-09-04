@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import "./App.css";
 import BookmarkedJobs from "./components/BookmarkedJobs";
 import SearchForm from "./components/SearchForm";
 import SearchAlerts from "./components/SearchAlerts";
@@ -63,7 +62,7 @@ function App() {
 
   return (
     <Router>
-      <div className="container">
+      <div className="min-h-screen bg-graphite-950 text-graphite-100">
         <Routes>
           <Route
             path="/"
