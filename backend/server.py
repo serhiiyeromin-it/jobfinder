@@ -15,6 +15,8 @@ from crawler_api_baa import crawl_arbeitsagentur
 import logging
 from logstash_formatter import LogstashFormatterV1
 from logging.handlers import SocketHandler
+from prometheus_flask_exporter import PrometheusMetrics
+
 
 load_dotenv()  # Lädt die Umgebungsvariablen aus der .env-Datei
 
@@ -29,8 +31,10 @@ logger.addHandler(handler)
 
 logger.info("Flask backend gestartet — Logstash-Logging aktiviert")
 
+
 app = Flask(__name__)  # Erstellt eine Flask-Instanz
 CORS(app)  # Erlaubt Cross-Origin-Requests
+metrics = PrometheusMetrics(app)  # Initialisiert Prometheus-Metriken
 
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
 app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
