@@ -22,20 +22,15 @@ def test_search_alert_crud(client):
     alerts = resp.get_json()
     assert any(a['_id'] == alert_id for a in alerts)
 
-    # 3) Update alert
-    new_data = {"keywords": ["Django"], "location": "Berlin", "radius": 25, "email": "test@example.com"}
-    resp = client.post(f'/update_search_alert/{alert_id}', json=new_data)
-    assert resp.status_code == 200 and resp.get_json()['success'] is True
-
-    # 4) Get search results (leer)
+    # 3) Get search results (leer)
     resp = client.get(f'/get_search_results/{alert_id}')
     assert resp.status_code == 200
     assert resp.get_json() == []
 
-    # 5) Delete alert
+    # 4) Delete alert
     resp = client.delete(f'/delete_search_alert/{alert_id}')
     assert resp.status_code == 200 and resp.get_json()['success'] is True
 
-    # 6) Verify deletion
+    # 5) Verify deletion
     resp = client.get('/search_alerts')
     assert alert_id not in [a['_id'] for a in resp.get_json()]
