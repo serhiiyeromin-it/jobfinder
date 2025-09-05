@@ -9,7 +9,7 @@ on:
 env:
   MONGO_URI: ${{ secrets.MONGO_URI }}
   BAA_API_KEY: ${{ secrets.BAA_API_KEY }}
-  PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+  DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
 jobs:
   backup:
@@ -27,7 +27,7 @@ jobs:
         env:
           MONGO_URI: ${{ secrets.MONGO_URI }}
           BAA_API_KEY: ${{ secrets.BAA_API_KEY }}
-          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: 🛡️ Backup durchführen
         run: bash backup-mongo.sh
