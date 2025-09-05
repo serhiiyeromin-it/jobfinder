@@ -73,17 +73,20 @@ def jobsuchen():
         location = data.get('location', '')
         radius = int(data.get('radius', '30'))
 
+        # (A) ZUERST: alles nicht-gemerkte löschen
+        collection.delete_many({"bookmark": False})
+        print("Alle alten (nicht gespeicherten) Jobs gelöscht.")
+
         print("Scraping gestartet mit:", keywords, location, radius)
         new_jobs_stepstone = []
-        new_jobs_arbeitsagentur = crawl_arbeitsagentur(keywords, location, radius)
-        new_jobs = new_jobs_stepstone + new_jobs_arbeitsagentur
+        new_jobs_arbeitsagentur = crawl_arbeitsagentur(keywords, location, radius, None)
+        new_jobs = new_jobs_stepstone + (new_jobs_arbeitsagentur or [])
 
+        # (C) vorbereiten & einfügen (einmalig, aus dem Server)
         for job in new_jobs:
             job['bookmark'] = False
-
-        collection.delete_many({"bookmark": False})
-        print("Alle alten Jobs in der Datenbank gelöscht.")
-
+        
+        # Bookmarks schützen (nicht doppeln)
         bookmarked_jobs = [
             {**job, '_id': str(job['_id'])}
             for job in collection.find({"bookmark": True})
@@ -91,22 +94,28 @@ def jobsuchen():
 
         unique_jobs = []
         for new_job in new_jobs:
-            if not any(
-                bookmarked_job['title'] == new_job['title'] and
-                bookmarked_job['company'] == new_job['company'] and
-                bookmarked_job['link'] == new_job['link']
-                for bookmarked_job in bookmarked_jobs
+            # nicht einfügen, wenn als Bookmark schon vorhanden
+            if any(
+                b['title'] == new_job.get('title') and
+                b['company'] == new_job.get('company') and
+                b['link'] == new_job.get('link')
+                for b in bookmarked_jobs
             ):
-                if collection.count_documents(
-                    {"_id": new_job.get('_id')}, limit=1
-                ) == 0:
-                    result = collection.insert_one(new_job)
-                    new_job['_id'] = str(result.inserted_id)
-                    unique_jobs.append(new_job)
-                    print(
-                        f"Neuer Job eingefügt: {new_job['title']} bei "
-                        f"{new_job['company']}"
-                    )
+                continue
+
+            # EXISTENZPRÜFUNG: per natürlichem Schlüssel statt _id
+            exists = collection.count_documents(
+                {
+                    "title": new_job.get("title"),
+                    "company": new_job.get("company"),
+                    "link": new_job.get("link"),
+                },
+                limit=1
+            )
+            if exists == 0:
+                result = collection.insert_one({**new_job, "bookmark": False})
+                new_job["_id"] = str(result.inserted_id)
+                unique_jobs.append(new_job)
 
         print(f"{len(unique_jobs)} Jobs in MongoDB gespeichert.")
         return jsonify(unique_jobs)
@@ -122,24 +131,10 @@ def jobsuchen():
         print(f"{len(jobs)} Jobs aus MongoDB abgerufen.")
         return jsonify(jobs)
 
-
-@app.route('/jobsuchen_baa', methods=['POST'])
-def jobsuchen_baa():
-    if request.method == 'POST':
-        data = request.json
-        keywords = data.get('keywords', [])
-        location = data.get('location', '')
-        radius = int(data.get('radius', 30))
-
-        print(
-            f"Starte Arbeitsagentur-Crawl mit: {keywords}, {location}, "
-            f"{radius}km"
-        )
-
-        new_jobs = crawl_arbeitsagentur(keywords, location, radius, collection)
-
-        return jsonify(new_jobs)
-
+@app.route('/reset_jobs', methods=['POST'])
+def reset_jobs():
+    res = collection.delete_many({"bookmark": False})
+    return jsonify({"deleted": res.deleted_count})
 
 @app.route('/update_bookmark', methods=['POST'])
 def update_bookmark():
@@ -177,32 +172,6 @@ def get_bookmarked_jobs():
         job['_id'] = str(job['_id'])
     print(f"{len(jobs)} bookmarked Jobs aus MongoDB abgerufen.")
     return jsonify(jobs)
-
-
-@app.route('/update_search_alert/<string:id>', methods=['POST'])
-def update_search_alert(id):
-    data = request.json
-    updated_data = {
-        "keywords": data.get('keywords', []),
-        "location": data.get('location', ''),
-        "radius": int(data.get('radius', 30)),
-        "email": data.get('email', '')
-    }
-
-    result = search_alerts_collection.update_one(
-        {'_id': ObjectId(id)},
-        {'$set': updated_data}
-    )
-    if result.modified_count == 1:
-        return jsonify({
-            'success': True, 'message': 'Suchauftrag erfolgreich aktualisiert.'
-        })
-    else:
-        return jsonify({
-            'success': False,
-            'error': 'Suchauftrag nicht gefunden oder keine Änderungen vorgenommen.'
-        }), 404
-
 
 @app.route('/save_search', methods=['POST'])
 def save_search():
