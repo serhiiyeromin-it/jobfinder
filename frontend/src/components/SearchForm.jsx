@@ -24,7 +24,12 @@ const NavButton = ({ to, children }) => {
   );
 };
 
-export default function SearchForm({ onSearch, jobs, handleBookmarkChange }) {
+export default function SearchForm({
+  onSearch,
+  jobs,
+  handleBookmarkChange,
+  onResetUI = () => {},
+}) {
   const [keywords, setKeywords] = useState([]);
   const [location, setLocation] = useState("");
   const [radius, setRadius] = useState("30");
@@ -38,6 +43,9 @@ export default function SearchForm({ onSearch, jobs, handleBookmarkChange }) {
       keywordInput.value = "";
     }
   };
+
+  const handleResetJobs = () =>
+    fetch(`${API_URL}/reset_jobs`, { method: "POST" }).catch(console.error);
 
   const handleKeyDown = (e) => {
     const keywordInput = e.target;
@@ -201,7 +209,11 @@ export default function SearchForm({ onSearch, jobs, handleBookmarkChange }) {
                     {/* Neuer Button rechts – gleiche Größe wie die anderen */}
                     <button
                       type="button"
-                      onClick={() => setKeywords([])}
+                      onClick={() => {
+                        setKeywords([]);
+                        onResetUI();
+                        handleResetJobs();
+                      }}
                       className="w-[160px] h-10 justify-self-start sm:justify-self-end rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 transition"
                     >
                       Reset
