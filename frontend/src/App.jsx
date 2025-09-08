@@ -71,6 +71,7 @@ function App() {
                 onSearch={handleSearch}
                 jobs={jobs}
                 handleBookmarkChange={handleBookmarkChange}
+                onResetUI={() => setJobs([])}
               />
             }
           />
