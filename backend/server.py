@@ -15,6 +15,8 @@ from crawler_api_baa import crawl_arbeitsagentur
 import logging
 from logstash_formatter import LogstashFormatterV1
 from logging.handlers import SocketHandler
+from prometheus_flask_exporter import PrometheusMetrics
+
 
 load_dotenv()  # Lädt die Umgebungsvariablen aus der .env-Datei
 
@@ -29,8 +31,14 @@ logger.addHandler(handler)
 
 logger.info("Flask backend gestartet — Logstash-Logging aktiviert")
 
+
 app = Flask(__name__)  # Erstellt eine Flask-Instanz
 CORS(app)  # Erlaubt Cross-Origin-Requests
+
+metrics = PrometheusMetrics(app, path="/metrics") # Initialisiert Prometheus-Metriken
+metrics.info("backend_app", "Nightcrawler Backend", version="1.0.0")
+print("✅ Prometheus metrics endpoint registered: /metrics")
+
 
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
 app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
@@ -311,6 +319,9 @@ def get_search_results(alert_id):
         result['_id'] = str(result['_id'])
     return jsonify(results)
 
+print("Registrierte Routen:")
+for rule in app.url_map.iter_rules():
+    print(rule)
 
 if __name__ == '__main__':  # Startet die Flask-App
     app.run(host='0.0.0.0', port=3050)

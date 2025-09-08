@@ -22,7 +22,8 @@ services:
 
   # 🔧 Backend
   backend:
-    image: mrrobob/nightcrawler-backend:${IMAGE_TAG:-latest}
+    build: ./backend
+    # image: mrrobob/nightcrawler-backend:${IMAGE_TAG:-latest}
     container_name: backend
     pull_policy: always
     ports:
@@ -34,7 +35,8 @@ services:
 
   # 🎨 Frontend
   frontend:
-    image: mrrobob/nightcrawler-frontend:${IMAGE_TAG:-latest}
+    build: ./frontend
+    # image: mrrobob/nightcrawler-frontend:${IMAGE_TAG:-latest}
     container_name: frontend
     pull_policy: always
     ports:
