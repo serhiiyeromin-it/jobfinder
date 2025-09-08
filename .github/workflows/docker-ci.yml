@@ -55,9 +55,9 @@ jobs:
           docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
           echo "Waiting for services..."
           # Warten mit Backoff statt fixer 10s
-          for i in {1..10}; do
+          for i in {1..20}; do
             if curl -fsS http://localhost:3050/health >/dev/null; then break; fi
-            sleep 3
+            sleep 5
           done
           curl --fail http://localhost:3050/health || (echo "❌ Backend failed!" && docker compose logs backend && exit 1)
           curl --fail http://localhost:5173 || (echo "❌ Frontend failed!" && docker compose logs frontend && exit 1)
