@@ -7,15 +7,26 @@ from mongodb_connect import (
     collection,
     search_alerts_collection,
     search_results_collection,
+    db,
 )
 from bson.objectid import ObjectId
 from apscheduler.schedulers.background import BackgroundScheduler
-from datetime import datetime, UTC
 from crawler_api_baa import crawl_arbeitsagentur
 import logging
 from logstash_formatter import LogstashFormatterV1
 from logging.handlers import SocketHandler
 from prometheus_flask_exporter import PrometheusMetrics
+import bcrypt
+import pyotp
+from datetime import datetime, timedelta, timezone, UTC
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+from flask_jwt_extended import (
+    JWTManager,
+    create_access_token,
+    create_refresh_token,
+    jwt_required,
+    get_jwt_identity
+)
 
 
 load_dotenv()  # Lädt die Umgebungsvariablen aus der .env-Datei
@@ -46,6 +57,14 @@ app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_USERNAME')
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET", "dev-change-me")  # setze im Prod per ENV
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(minutes=15)
+app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=7)
+EMAIL_SECRET = os.getenv("EMAIL_SECRET", "dev-email-secret")
+email_signer = URLSafeTimedSerializer(EMAIL_SECRET)
+jwt = JWTManager(app)
+PUBLIC_APP_URL = os.getenv("PUBLIC_APP_URL", "http://localhost:5173")
+MFA_ISSUER = os.getenv("MFA_ISSUER", "NightCrawler")
 
 # Flask-Mail initialisieren
 mail = Mail(app)
@@ -68,6 +87,39 @@ def send_email(to_email, subject, body):
     except Exception as e:
         print(f"Fehler beim Senden der Email: {e}")
 
+users = db["users"]
+try:
+    users.create_index("email", unique=True)
+except Exception:
+    # Index existiert ggf. schon oder DB-User hat keine Rechte — safe to ignore in dev
+    pass
+
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+def check_password(password: str, hashed: str) -> bool:
+    try:
+        return bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8"))
+    except Exception:
+        return False
+
+def issue_tokens(user_id):
+    """Return access, refresh (strings). identity is user_id as string."""
+    sub = str(user_id)
+    access = create_access_token(identity=sub, additional_claims={"stage": "auth"})
+    refresh = create_refresh_token(identity=sub)
+    return access, refresh
+
+# Email verification token helpers
+def generate_email_token(user_id: str) -> str:
+    return email_signer.dumps({"uid": str(user_id)}, salt="verify")
+
+def verify_email_token(token: str, max_age: int = 60*60*24) -> str | None:
+    try:
+        data = email_signer.loads(token, salt="verify", max_age=max_age)
+        return data.get("uid")
+    except (SignatureExpired, BadSignature):
+        return None
 
 @app.route("/health", methods=["GET"])
 def health():
@@ -318,6 +370,65 @@ def get_search_results(alert_id):
     for result in results:
         result['_id'] = str(result['_id'])
     return jsonify(results)
+
+@app.route("/auth/register", methods=["POST"])
+def register():
+    data = request.json or {}
+    email = (data.get("email") or "").strip().lower()
+    pw = data.get("password") or ""
+    if not email or not pw:
+        return jsonify({"error": "email/password required"}), 400
+    if users.find_one({"email": email}):
+        return jsonify({"error": "Email already registered"}), 409
+
+    res = users.insert_one({
+        "email": email,
+        "password": hash_password(pw),
+        "emailVerified": False,
+        "createdAt": datetime.now(UTC),
+    })
+
+    # Verifikationslink erzeugen (24h gültig)
+    token = email_signer.dumps({"uid": str(res.inserted_id)}, salt="verify")
+    verify_url = f"{PUBLIC_APP_URL}/verify-email?token={token}"
+
+    # TODO: echte Mail senden; fürs Dev:
+    print("DEV verification link:", verify_url)
+
+    return jsonify({"ok": True})
+    
+
+@app.route("/auth/verify-email", methods=["POST"])
+def verify_email():
+    token = (request.json or {}).get("token")
+    if not token:
+        return jsonify({"error": "token required"}), 400
+    try:
+        data = email_signer.loads(token, salt="verify", max_age=60*60*24)
+    except SignatureExpired:
+        return jsonify({"error": "token expired"}), 400
+    except BadSignature:
+        return jsonify({"error": "invalid token"}), 400
+
+    uid = data.get("uid")
+    users.update_one({"_id": ObjectId(uid)}, {"$set": {"emailVerified": True}})
+    return jsonify({"ok": True})
+
+
+@app.route("/auth/login", methods=["POST"])
+def login():
+    data = request.json or {}
+    email = (data.get("email") or "").strip().lower()
+    pw = data.get("password") or ""
+
+    user = users.find_one({"email": email})
+    if not user or not check_password(pw, user.get("password", "")):
+        return jsonify({"error": "Invalid credentials"}), 401
+    if not user.get("emailVerified", False):
+        return jsonify({"error": "email_not_verified"}), 403
+
+    access, refresh = issue_tokens(user["_id"])
+    return jsonify({"access": access, "refresh": refresh})
 
 print("Registrierte Routen:")
 for rule in app.url_map.iter_rules():
