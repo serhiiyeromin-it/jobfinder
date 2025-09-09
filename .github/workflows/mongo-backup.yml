@@ -28,10 +28,13 @@ jobs:
 
       - name: Convert BSON to JSON
         run: |
-          for file in $(find ./backups -name "*.bson"); do
-            base=$(basename "$file" .bson)
-            bsondump "$file" > "./backups/${base}.json"
+          DUMP_DIR=$(find ./backups -type d -name job_database)
+          for file in $(find "$DUMP_DIR" -name "*.bson"); do
+          base=$(basename "$file" .bson)
+          bsondump "$file" > "./backups/${base}.json"
+          echo "Exported $file -> backups/${base}.json"
           done
+
 
       - name: Upload backup artifact
         uses: actions/upload-artifact@v3
