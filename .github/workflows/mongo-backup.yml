@@ -26,21 +26,20 @@ jobs:
         run: |
           mkdir -p backups
           mongodump \
-            --uri="$MONGO_URI" \
-            --db=job_database \
+            --uri="$MONGO_URI_BACKUP" \
             --out=./backups/mongo-$(date +'%Y-%m-%d_%H-%M') \
             --verbose
         env:
-          MONGO_URI: ${{ secrets.MONGO_URI }}
+          MONGO_URI_BACKUP: ${{ secrets.MONGO_URI_BACKUP }}
 
       - name: Convert BSON to JSON
         run: |
-          DUMP_DIR=$(find ./backups -type d -name job_database)
-          for file in $(find "$DUMP_DIR" -name "*.bson"); do
-          base=$(basename "$file" .bson)
-          bsondump "$file" > "./backups/${base}.json"
-          echo "Exported $file -> backups/${base}.json"
+          for file in $(find ./backups -name "*.bson"); do
+            base=$(basename "$file" .bson)
+            bsondump "$file" > "./backups/${base}.json"
+            echo "Exported $file -> backups/${base}.json"
           done
+
 
 
       - name: Upload backup artifact
