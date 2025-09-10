@@ -28,7 +28,6 @@ jobs:
           mongodump \
             --uri="$MONGO_URI" \
             --db=job_database \
-            --ssl \
             --out=./backups/mongo-$(date +'%Y-%m-%d_%H-%M') \
             --verbose
         env:
