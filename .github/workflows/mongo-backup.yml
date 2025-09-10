@@ -26,11 +26,11 @@ jobs:
         run: |
           mkdir -p backups
           mongodump \
-            --uri="$MONGO_URI" \
+            --uri="$MONGO_URI_BACKUP" \
             --out=./backups/mongo-$(date +'%Y-%m-%d_%H-%M') \
             --verbose
         env:
-          MONGO_URI: ${{ secrets.MONGO_URI }}
+          MONGO_URI: ${{ secrets.MONGO_URI_BACKUP }}
 
       - name: Convert BSON to JSON
         run: |
