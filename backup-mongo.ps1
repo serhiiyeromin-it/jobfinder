@@ -1,7 +1,7 @@
 
 # backup-mongo.ps1
 param (
-    [string]$MONGO_URI = "mongodb+srv://USERNAME:PASSWORD@cluster0.fotipne.mongodb.net/job_database",
+    [string]$MONGO_URI = $env:MONGO_URI,
     [string]$OUT_DIR = "./backups/job_database-$(Get-Date -Format yyyy-MM-dd_HH-mm)"
 )
 
