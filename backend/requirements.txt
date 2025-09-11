@@ -1,4 +1,5 @@
 Flask
+Flask-JWT-Extended
 flask-cors
 flask-mail
 flask-talisman
@@ -9,4 +10,9 @@ pymongo
 apscheduler
 logstash-formatter
 prometheus-flask-exporter
+bcrypt
+itsdangerous
+pyotp
+qrcode
+Pillow
 
