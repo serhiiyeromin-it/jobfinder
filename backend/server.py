@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_mail import Mail, Message
+from flask_talisman import Talisman
 import os
 from dotenv import load_dotenv
 from mongodb_connect import (
@@ -45,6 +46,21 @@ logger.info("Flask backend gestartet — Logstash-Logging aktiviert")
 
 app = Flask(__name__)  # Erstellt eine Flask-Instanz
 CORS(app)  # Erlaubt Cross-Origin-Requests
+Talisman(app, content_security_policy=None, force_https=False, strict_transport_security=False )  # Aktiviert Sicherheits-Header
+
+CORS(app, resources={
+    r"/api/*": {"origins": "http://localhost:5173"}
+})
+
+
+@app.route("/")
+def index():
+    return "Hello, Talisman!"
+
+@app.route("/api/test", methods=["GET"])
+def test():
+    return jsonify({"status": "ok", "message": "API funktioniert!"})
+
 
 metrics = PrometheusMetrics(app, path="/metrics") # Initialisiert Prometheus-Metriken
 metrics.info("backend_app", "Nightcrawler Backend", version="1.0.0")

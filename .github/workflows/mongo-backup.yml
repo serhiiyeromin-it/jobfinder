@@ -2,42 +2,49 @@
 name: MongoDB Backup
 
 on:
+  workflow_dispatch:   # manueller Start über Actions
   schedule:
-    - cron: '0 2 * * *' # jeden Tag um 2:00 Uhr nachts
-  workflow_dispatch:
-
-env:
-  MONGO_URI: ${{ secrets.MONGO_URI }}
-  BAA_API_KEY: ${{ secrets.BAA_API_KEY }}
-  DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    - cron: "0 2 * * *"   # jeden Tag um 2:00 Uhr nachts
 
 jobs:
   backup:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📦 Repository klonen
+      - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: 🐳 Docker Compose installieren
-        run: sudo apt-get update && sudo apt-get install docker-compose -y
-
-      - name: 🚀 MongoDB starten
-        run: docker-compose up -d nightcrawler-mongo
+      - name: Install MongoDB tools
+        run: |
+          curl -OL https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2204-x86_64-100.12.2.tgz
+          tar -xvf mongodb-database-tools-ubuntu2204-x86_64-100.12.2.tgz
+          sudo mv mongodb-database-tools-*/bin/* /usr/local/bin/
+          mongodump --version
+          bsondump --version
+          
+      - name: Run mongodump
+        run: |
+          mkdir -p backups
+          mongodump \
+            --uri="$MONGO_URI_BACKUP" \
+            --out=./backups/mongo-$(date +'%Y-%m-%d_%H-%M') \
+            --verbose
         env:
-          MONGO_URI: ${{ secrets.MONGO_URI }}
-          BAA_API_KEY: ${{ secrets.BAA_API_KEY }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          MONGO_URI_BACKUP: ${{ secrets.MONGO_URI_BACKUP }}
 
-      - name: 🛡️ Backup durchführen
-        run: bash backup-mongo.sh
+      - name: Convert BSON to JSON
+        run: |
+          for file in $(find ./backups -name "*.bson"); do
+            base=$(basename "$file" .bson)
+            bsondump "$file" > "./backups/${base}.json"
+            echo "Exported $file -> backups/${base}.json"
+          done
 
-      - name: 🧹 Container stoppen
-        run: docker-compose down
-      
-      - name: 📤 Backup als Artefakt hochladen
+
+
+      - name: Upload backup artifact
         uses: actions/upload-artifact@v4
         with:
-          name: mongo-backup-${{ github.run_id }}
-          path: backups/
+          name: mongo-backup
+          path: backups
           retention-days: 7

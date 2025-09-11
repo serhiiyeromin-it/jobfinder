@@ -2,6 +2,7 @@ Flask
 Flask-JWT-Extended
 flask-cors
 flask-mail
+flask-talisman
 python-dotenv
 requests
 bs4

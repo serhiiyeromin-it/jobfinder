@@ -1,0 +1,8 @@
+# PAM – wird im Container nicht verwendet
+CVE-2025-6020
+
+# SQLite – warten auf Fix
+CVE-2025-7458
+
+# Zlib – Debian wird_nicht_behoben
+CVE-2023-45853
