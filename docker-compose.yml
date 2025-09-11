@@ -6,6 +6,7 @@ networks:
 volumes:
   mongo-data:
   esdata:
+  trivy-cache: {}
 
 services:
   # 🔍 MongoDB
@@ -27,6 +28,7 @@ services:
   # 🔧 Backend
   backend:
     build: ./backend
+    image: nightcrawler-backend:latest
     # image: mrrobob/nightcrawler-backend:${IMAGE_TAG:-latest}
     container_name: backend
     pull_policy: always
@@ -111,6 +113,19 @@ services:
     ports:
       - "9100:9100"
     networks: [appnet]
+
+  # 🔍 Trivy Security Scanner
+
+  trivy:
+    image: aquasec/trivy:latest
+    command: image --exit-code 1 --severity CRITICAL,HIGH --ignorefile /app/.trivyignore nightcrawler-backend:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - trivy-cache:/root/.cache/
+      - ./.trivyignore:/app/.trivyignore:ro
+    networks:
+      - appnet
+
 
 
     
