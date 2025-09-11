@@ -1,11 +1,21 @@
 version: 2
 updates:
+  # 🔧 Aktualisierungen für npm (Frontend)
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
       interval: "monthly"
+      day: "monday"    # läuft am ersten Montag des Monats
+      time: "02:00"    # UTC
+    open-pull-requests-limit: 1   # maximal ein PR
+    rebase-strategy: "disabled"  # nicht täglich neu erstellen
 
+  # 🐳 Aktualisierungen für Docker
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "monthly"
+      day: "monday"
+      time: "02:00"
+    open-pull-requests-limit: 1
+    rebase-strategy: "disabled"
