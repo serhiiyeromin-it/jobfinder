@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3050";
+import { apiFetch } from "../lib/auth";
 
 const NavButton = ({ to, children }) => {
   const { pathname } = useLocation();
@@ -29,7 +28,7 @@ export default function SearchResults() {
   const [results, setResults] = useState([]);
 
   useEffect(() => {
-    fetch(`${API_URL}/get_search_results/${alertId}`)
+    apiFetch(`/get_search_results/${alertId}`)
       .then((res) => res.json())
       .then((data) => setResults(data))
       .catch((err) =>
