@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3050";
+import { apiFetch } from "../lib/auth";
 
 const NavButton = ({ to, children }) => {
   const { pathname } = useLocation();
@@ -31,7 +30,7 @@ export default function SearchAlerts() {
 
   useEffect(() => {
     // API-Endpunkt zum Abrufen der Suchaufträge
-    fetch(`${API_URL}/search_alerts`)
+    apiFetch("/search_alerts")
       .then((res) => res.json())
       .then((data) => setSearchAlerts(data))
       .catch((err) =>
@@ -48,7 +47,7 @@ export default function SearchAlerts() {
     if (e) e.stopPropagation();
     try {
       // API-Endpunkt zum Löschen eines Suchauftrags
-      const res = await fetch(`${API_URL}/delete_search_alert/${id}`, {
+      const res = await apiFetch(`/delete_search_alert/${id}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Löschen fehlgeschlagen");

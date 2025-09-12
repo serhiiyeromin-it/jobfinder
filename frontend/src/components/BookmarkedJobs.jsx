@@ -1,8 +1,6 @@
-// frontend/src/components/BookmarkedJobs.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3050";
+import { apiFetch } from "../lib/auth";
 
 const NavButton = ({ to, children }) => {
   const { pathname } = useLocation();
@@ -33,7 +31,7 @@ export default function BookmarkedJobs() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${API_URL}/bookmarked_jobs`);
+        const res = await apiFetch("/bookmarked_jobs");
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         setJobs(Array.isArray(data) ? data : []);
@@ -48,12 +46,12 @@ export default function BookmarkedJobs() {
 
   const removeBookmark = async (jobId) => {
     try {
-      const res = await fetch(`${API_URL}/update_bookmark`, {
+      const res = await apiFetch("/update_bookmark", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ _id: jobId, bookmark: false }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.success) throw new Error(data?.message || "Fehler");
       setJobs((prev) => prev.filter((j) => j._id !== jobId));
     } catch (e) {
@@ -62,8 +60,9 @@ export default function BookmarkedJobs() {
     }
   };
 
-  if (loading) return <div>Lade Lesezeichen…</div>;
-  if (err) return <div>{err}</div>;
+  if (loading)
+    return <div className="text-graphite-300">Lade Lesezeichen…</div>;
+  if (err) return <div className="text-red-400">{err}</div>;
 
   return (
     <div className="mx-auto max-w-[1400px] w-full px-3 md:px-6 lg:px-8 py-4">

@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3050";
+import { apiFetch } from "../lib/auth";
 
 const NavButton = ({ to, children }) => {
   const { pathname } = useLocation();
@@ -45,7 +44,7 @@ export default function SearchForm({
   };
 
   const handleResetJobs = () =>
-    fetch(`${API_URL}/reset_jobs`, { method: "POST" }).catch(console.error);
+    apiFetch(`/reset_jobs`, { method: "POST" }).catch(console.error);
 
   const handleKeyDown = (e) => {
     const keywordInput = e.target;
@@ -79,7 +78,7 @@ export default function SearchForm({
       return;
     }
 
-    fetch(`${API_URL}/save_search`, {
+    apiFetch(`/save_search`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ keywords, location, radius, email }),
