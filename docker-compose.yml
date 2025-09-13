@@ -1,8 +1,15 @@
+
 networks:
   appnet:
     driver: bridge
 
+volumes:
+  mongo-data:
+  esdata:
+  trivy-cache: {}
+
 services:
+  # 🔍 MongoDB
   nightcrawler-mongo:
     image: mongo:7
     container_name: nightcrawler-mongo
@@ -11,19 +18,39 @@ services:
     volumes:
       - mongo-data:/data/db
     networks: [appnet]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # 🔧 Backend
   backend:
-    image: mrrobob/nightcrawler-backend:${IMAGE_TAG:-latest}
+    build: ./backend
+    image: nightcrawler-backend:latest
+    # image: mrrobob/nightcrawler-backend:${IMAGE_TAG:-latest}
     container_name: backend
     pull_policy: always
     ports:
       - "3050:3050"
     environment:
-      MONGO_URI: ${MONGO_URI}
+      MONGO_URI: ${MONGO_URI:-mongodb://nightcrawler-mongo:27017/nightcrawler}
       BAA_API_KEY: ${BAA_API_KEY}
     networks: [appnet]
+    depends_on:
+      nightcrawler-mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3050/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # 🎨 Frontend
   frontend:
-    image: mrrobob/nightcrawler-frontend:${IMAGE_TAG:-latest}
+    build: ./frontend
+    # image: mrrobob/nightcrawler-frontend:${IMAGE_TAG:-latest}
     container_name: frontend
     pull_policy: always
     ports:
@@ -31,6 +58,74 @@ services:
     environment:
       VITE_API_URL: http://backend:3050
     networks: [appnet]
-volumes:
-  mongo-data:
+
+  # 📄 Elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    networks: [appnet]
+
+  # 📦 Logstash
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    volumes:
+      - ./logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    ports:
+      - "5000:5000"
+    networks: [appnet]
+
+  # 📊 Kibana
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    networks: [appnet]
+
+  # 📈 Prometheus
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks: [appnet]
+
+  # 📉 Grafana
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3300:3000"
+    depends_on:
+      - prometheus
+    networks: [appnet]
+
+  # 🖥️ Node Exporter
+  node_exporter:
+    image: prom/node-exporter
+    ports:
+      - "9100:9100"
+    networks: [appnet]
+
+  # 🔍 Trivy Security Scanner
+
+  trivy:
+    image: aquasec/trivy:latest
+    command: image --exit-code 1 --severity CRITICAL,HIGH --ignorefile /app/.trivyignore nightcrawler-backend:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - trivy-cache:/root/.cache/
+      - ./.trivyignore:/app/.trivyignore:ro
+    networks:
+      - appnet
+
+
+
     

@@ -33,14 +33,34 @@ jobs:
         run: |
           docker build -t ${{ secrets.dockerhub_username }}/nightcrawler-frontend:latest ./frontend
           docker push ${{ secrets.dockerhub_username }}/nightcrawler-frontend:latest
+          
+      - name: Install Python dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Create CI compose override (dummy logstash)
+        run: |
+          cat > docker-compose.ci.yml <<'YAML'
+          services:
+            logstash:
+              image: alpine:3.20
+              container_name: logstash
+              # Leichter TCP-Sink auf 5000, damit SocketHandler was zum Verbinden hat
+              command: sh -c "apk add --no-cache busybox-extras >/dev/null 2>&1 && nc -lk -p 5000 >/dev/null"
+              expose:
+                - "5000"
+          YAML
 
       - name: Run containers for smoke tests
         run: |
-          docker compose up -d
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
           echo "Waiting for services..."
-          sleep 10
-          curl --fail http://localhost:3050/health || (echo "❌ Backend failed!" && exit 1)
-          curl --fail http://localhost:5173 || (echo "❌ Frontend failed!" && exit 1)
+          # Warten mit Backoff statt fixer 10s
+          for i in {1..20}; do
+            if curl -fsS http://localhost:3050/health >/dev/null; then break; fi
+            sleep 5
+          done
+          curl --fail http://localhost:3050/health || (echo "❌ Backend failed!" && docker compose logs backend && exit 1)
+          curl --fail http://localhost:5173 || (echo "❌ Frontend failed!" && docker compose logs frontend && exit 1)
 
       - name: Clean up
         if: always()

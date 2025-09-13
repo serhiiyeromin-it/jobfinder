@@ -1,22 +1,71 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_mail import Mail, Message
+from flask_talisman import Talisman
 import os
 from dotenv import load_dotenv
 from mongodb_connect import (
     collection,
     search_alerts_collection,
     search_results_collection,
+    db,
 )
 from bson.objectid import ObjectId
 from apscheduler.schedulers.background import BackgroundScheduler
-from datetime import datetime, UTC
 from crawler_api_baa import crawl_arbeitsagentur
+import logging
+from logstash_formatter import LogstashFormatterV1
+from logging.handlers import SocketHandler
+from prometheus_flask_exporter import PrometheusMetrics
+import bcrypt
+from datetime import datetime, timedelta, UTC
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+from flask_jwt_extended import (
+    JWTManager,
+    create_access_token,
+    create_refresh_token,
+    jwt_required,
+    get_jwt_identity,
+    get_jwt
+)
+
 
 load_dotenv()  # Lädt die Umgebungsvariablen aus der .env-Datei
 
+# Logger-Konfiguration für Logstash
+
+logger = logging.getLogger("nightcrawler-backend")
+logger.setLevel(logging.INFO)
+
+handler = SocketHandler("logstash", 5000)  # Name des Logstash-Containers in Docker
+handler.setFormatter(LogstashFormatterV1())
+logger.addHandler(handler)
+
+logger.info("Flask backend gestartet — Logstash-Logging aktiviert")
+
+
 app = Flask(__name__)  # Erstellt eine Flask-Instanz
 CORS(app)  # Erlaubt Cross-Origin-Requests
+Talisman(app, content_security_policy=None, force_https=False, strict_transport_security=False )  # Aktiviert Sicherheits-Header
+
+CORS(app, resources={
+    r"/api/*": {"origins": "http://localhost:5173"}
+})
+
+
+@app.route("/")
+def index():
+    return "Hello, Talisman!"
+
+@app.route("/api/test", methods=["GET"])
+def test():
+    return jsonify({"status": "ok", "message": "API funktioniert!"})
+
+
+metrics = PrometheusMetrics(app, path="/metrics") # Initialisiert Prometheus-Metriken
+metrics.info("backend_app", "Nightcrawler Backend", version="1.0.0")
+print("✅ Prometheus metrics endpoint registered: /metrics")
+
 
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
 app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
@@ -24,6 +73,16 @@ app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_USERNAME')
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET", "dev-change-me")  # setze im Prod per ENV
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(minutes=15)
+app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=7)
+EMAIL_SECRET = os.getenv("EMAIL_SECRET", "dev-email-secret")
+email_signer = URLSafeTimedSerializer(EMAIL_SECRET)
+jwt = JWTManager(app)
+PUBLIC_APP_URL = os.getenv("PUBLIC_APP_URL", "http://localhost:5173")
+
+revoked = db["revoked_tokens"]
+revoked.create_index("jti", unique=True)
 
 # Flask-Mail initialisieren
 mail = Mail(app)
@@ -46,53 +105,100 @@ def send_email(to_email, subject, body):
     except Exception as e:
         print(f"Fehler beim Senden der Email: {e}")
 
+users = db["users"]
+try:
+    users.create_index("email", unique=True)
+except Exception:
+    # Index existiert ggf. schon oder DB-User hat keine Rechte — safe to ignore in dev
+    pass
+
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+def check_password(password: str, hashed: str) -> bool:
+    try:
+        return bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8"))
+    except Exception:
+        return False
+
+def issue_tokens(user_id):
+    """Return access, refresh (strings). identity is user_id as string."""
+    sub = str(user_id)
+    access = create_access_token(identity=sub, additional_claims={"stage": "auth"})
+    refresh = create_refresh_token(identity=sub)
+    return access, refresh
+
+# Email verification token helpers
+def generate_email_token(user_id: str) -> str:
+    return email_signer.dumps({"uid": str(user_id)}, salt="verify")
+
+def verify_email_token(token: str, max_age: int = 60*60*24) -> str | None:
+    try:
+        data = email_signer.loads(token, salt="verify", max_age=max_age)
+        return data.get("uid")
+    except (SignatureExpired, BadSignature):
+        return None
 
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok"}), 200
 
 @app.route('/jobsuchen', methods=['GET', 'POST'])
+@jwt_required()
 def jobsuchen():
+    uid = get_jwt_identity()
+
     if request.method == 'POST':
         data = request.json
         keywords = data.get('keywords', [])
         location = data.get('location', '')
         radius = int(data.get('radius', '30'))
 
+        # (A) ZUERST: alles nicht-gemerkte löschen
+        collection.delete_many({"bookmark": False, "userId": uid})
+        print(f"[{uid}] Alte (nicht gespeicherten) Jobs gelöscht.")
+
         print("Scraping gestartet mit:", keywords, location, radius)
         new_jobs_stepstone = []
-        new_jobs_arbeitsagentur = crawl_arbeitsagentur(keywords, location, radius)
-        new_jobs = new_jobs_stepstone + new_jobs_arbeitsagentur
+        new_jobs_arbeitsagentur = crawl_arbeitsagentur(keywords, location, radius, None)
+        new_jobs = new_jobs_stepstone + (new_jobs_arbeitsagentur or [])
 
+        # (C) vorbereiten & einfügen (einmalig, aus dem Server)
         for job in new_jobs:
             job['bookmark'] = False
-
-        collection.delete_many({"bookmark": False})
-        print("Alle alten Jobs in der Datenbank gelöscht.")
-
+            job["userId"] = uid
+        
+        # Bookmarks schützen (nicht doppeln)
         bookmarked_jobs = [
             {**job, '_id': str(job['_id'])}
-            for job in collection.find({"bookmark": True})
+            for job in collection.find({"bookmark": True, "userId": uid})  # <-- scoped
         ]
 
         unique_jobs = []
         for new_job in new_jobs:
-            if not any(
-                bookmarked_job['title'] == new_job['title'] and
-                bookmarked_job['company'] == new_job['company'] and
-                bookmarked_job['link'] == new_job['link']
-                for bookmarked_job in bookmarked_jobs
+            # nicht einfügen, wenn als Bookmark schon vorhanden
+            if any(
+                b['title'] == new_job.get('title') and
+                b['company'] == new_job.get('company') and
+                b['link'] == new_job.get('link')
+                for b in bookmarked_jobs
             ):
-                if collection.count_documents(
-                    {"_id": new_job.get('_id')}, limit=1
-                ) == 0:
-                    result = collection.insert_one(new_job)
-                    new_job['_id'] = str(result.inserted_id)
-                    unique_jobs.append(new_job)
-                    print(
-                        f"Neuer Job eingefügt: {new_job['title']} bei "
-                        f"{new_job['company']}"
-                    )
+                continue
+
+            # EXISTENZPRÜFUNG: per natürlichem Schlüssel statt _id
+            exists = collection.count_documents(
+                {
+                    "userId": uid,
+                    "title": new_job.get("title"),
+                    "company": new_job.get("company"),
+                    "link": new_job.get("link"),
+                },
+                limit=1
+            )
+            if exists == 0:
+                result = collection.insert_one({**new_job, "bookmark": False})
+                new_job["_id"] = str(result.inserted_id)
+                unique_jobs.append(new_job)
 
         print(f"{len(unique_jobs)} Jobs in MongoDB gespeichert.")
         return jsonify(unique_jobs)
@@ -101,34 +207,25 @@ def jobsuchen():
         jobs = [
             {**job, '_id': str(job['_id'])}
             for job in collection.find(
-                {"bookmark": False},
+                {"bookmark": False, "userId": uid},  # <-- scoped
                 {'title': 1, 'company': 1, 'link': 1, 'bookmark': 1, '_id': 1}
             )
         ]
         print(f"{len(jobs)} Jobs aus MongoDB abgerufen.")
         return jsonify(jobs)
 
-
-@app.route('/jobsuchen_baa', methods=['POST'])
-def jobsuchen_baa():
-    if request.method == 'POST':
-        data = request.json
-        keywords = data.get('keywords', [])
-        location = data.get('location', '')
-        radius = int(data.get('radius', 30))
-
-        print(
-            f"Starte Arbeitsagentur-Crawl mit: {keywords}, {location}, "
-            f"{radius}km"
-        )
-
-        new_jobs = crawl_arbeitsagentur(keywords, location, radius, collection)
-
-        return jsonify(new_jobs)
-
+@app.route('/reset_jobs', methods=['POST'])
+@jwt_required()
+def reset_jobs():
+    uid = get_jwt_identity()
+    res = collection.delete_many({"bookmark": False, "userId": uid})
+    return jsonify({"deleted": res.deleted_count})
 
 @app.route('/update_bookmark', methods=['POST'])
+@jwt_required()
 def update_bookmark():
+    uid = get_jwt_identity()
+
     data = request.json
     job_id = data.get('_id')
     bookmark_status = data.get('bookmark')
@@ -143,6 +240,8 @@ def update_bookmark():
     else:
         query = {'_id': job_id}
 
+    query['userId'] = uid  # nur eigene Jobs updaten
+
     result = collection.update_one(query, {'$set': {'bookmark': bookmark_status}})
 
     if result.matched_count != 1:
@@ -150,12 +249,14 @@ def update_bookmark():
 
     return jsonify({'success': True})
 
-
 @app.route('/bookmarked_jobs', methods=['GET'])
+@jwt_required()
 def get_bookmarked_jobs():
+    uid = get_jwt_identity()
+
     jobs = list(
         collection.find(
-            {"bookmark": True},
+            {"bookmark": True, "userId": uid},  # <-- scoped
             {'title': 1, 'company': 1, 'link': 1, 'bookmark': 1}
         )
     )
@@ -164,34 +265,11 @@ def get_bookmarked_jobs():
     print(f"{len(jobs)} bookmarked Jobs aus MongoDB abgerufen.")
     return jsonify(jobs)
 
-
-@app.route('/update_search_alert/<string:id>', methods=['POST'])
-def update_search_alert(id):
-    data = request.json
-    updated_data = {
-        "keywords": data.get('keywords', []),
-        "location": data.get('location', ''),
-        "radius": int(data.get('radius', 30)),
-        "email": data.get('email', '')
-    }
-
-    result = search_alerts_collection.update_one(
-        {'_id': ObjectId(id)},
-        {'$set': updated_data}
-    )
-    if result.modified_count == 1:
-        return jsonify({
-            'success': True, 'message': 'Suchauftrag erfolgreich aktualisiert.'
-        })
-    else:
-        return jsonify({
-            'success': False,
-            'error': 'Suchauftrag nicht gefunden oder keine Änderungen vorgenommen.'
-        }), 404
-
-
 @app.route('/save_search', methods=['POST'])
+@jwt_required()
 def save_search():
+    uid = get_jwt_identity()
+
     data = request.json
     keywords = data.get('keywords', [])
     location = data.get('location', '')
@@ -202,7 +280,9 @@ def save_search():
         "keywords": keywords,
         "location": location,
         "radius": radius,
-        "email": email
+        "email": email,
+        'createdAt': datetime.now(UTC),
+        'userId': uid,
     }
     result = search_alerts_collection.insert_one(search_alerts_data)
     search_alerts_data['_id'] = str(result.inserted_id)
@@ -213,12 +293,14 @@ def save_search():
         print("Initialer Autoscan nach save_search fehlgeschlagen:", e)
     return jsonify({'success': True, 'search_alert': search_alerts_data})
 
-
 @app.route('/search_alerts', methods=['GET'])
+@jwt_required()
 def get_search_alerts():
+    uid = get_jwt_identity()
+
     search_alerts = list(
         search_alerts_collection.find(
-            {},
+            {"userId": uid},
             {'keywords': 1, 'location': 1, 'radius': 1, 'email': 1}
         )
     )
@@ -227,10 +309,11 @@ def get_search_alerts():
 
     return jsonify(search_alerts)
 
-
 @app.route('/delete_search_alert/<string:id>', methods=['DELETE'])
+@jwt_required()
 def delete_search_alert(id):
-    result = search_alerts_collection.delete_one({'_id': ObjectId(id)})
+    uid = get_jwt_identity()
+    result = search_alerts_collection.delete_one({'_id': ObjectId(id), 'userId': uid})
     if result.deleted_count == 1:
         return jsonify({'success': True})
     else:
@@ -259,9 +342,10 @@ def execute_search_alerts():
                 continue
 
             # Felder 1:1 übernehmen, nur Zuordnung + Timestamp setzen
-            for j in raw_jobs:
-                j['search_alert_id'] = str(alert['_id'])
-                j['timestamp'] = datetime.now(UTC)
+            for job in raw_jobs:
+                job['search_alert_id'] = str(alert['_id'])
+                job['userId'] = alert.get('userId')
+                job['timestamp'] = datetime.now(UTC)
 
             # Dedupe pro Alert – genau wie bei dir, nur mit get() falls 'link' fehlt
             existing_links = {
@@ -318,17 +402,126 @@ def execute_search_alerts():
 scheduler.add_job(execute_search_alerts, 'interval', minutes=3)
 scheduler.start()
 
-
 @app.route('/get_search_results/<string:alert_id>', methods=['GET'])
+@jwt_required()
 def get_search_results(alert_id):
+    uid = get_jwt_identity()
     results = list(
-        search_results_collection.find({"search_alert_id": alert_id})
+        search_results_collection.find({"search_alert_id": alert_id, "userId": uid})
     )
     for result in results:
         result['_id'] = str(result['_id'])
     return jsonify(results)
 
+@app.route("/auth/register", methods=["POST"])
+def register():
+    data = request.json or {}
+    email = (data.get("email") or "").strip().lower()
+    pw = data.get("password") or ""
+    if not email or not pw:
+        return jsonify({"error": "email/password required"}), 400
+    if users.find_one({"email": email}):
+        return jsonify({"error": "Email already registered"}), 409
+
+    res = users.insert_one({
+        "email": email,
+        "password": hash_password(pw),
+        "emailVerified": False,
+        "createdAt": datetime.now(UTC),
+    })
+
+    # Verifikationslink erzeugen (24h gültig)
+    token = email_signer.dumps({"uid": str(res.inserted_id)}, salt="verify")
+    verify_url = f"{PUBLIC_APP_URL}/verify-email?token={token}"
+
+    send_email(email, "Verify your account", f"Klicke hier: {verify_url}")
+
+    return jsonify({"ok": True})
+    
+@app.route("/auth/verify-email", methods=["POST"])
+def verify_email():
+    token = (request.json or {}).get("token")
+    if not token:
+        return jsonify({"error": "token required"}), 400
+    try:
+        data = email_signer.loads(token, salt="verify", max_age=60*60*24)
+    except SignatureExpired:
+        return jsonify({"error": "token expired"}), 400
+    except BadSignature:
+        return jsonify({"error": "invalid token"}), 400
+
+    uid = data.get("uid")
+    users.update_one({"_id": ObjectId(uid)}, {"$set": {"emailVerified": True}})
+    return jsonify({"ok": True})
+
+@app.route("/auth/login", methods=["POST"])
+def login():
+    data = request.json or {}
+    email = (data.get("email") or "").strip().lower()
+    pw = data.get("password") or ""
+
+    user = users.find_one({"email": email})
+    if not user or not check_password(pw, user.get("password", "")):
+        return jsonify({"error": "Invalid credentials"}), 401
+    if not user.get("emailVerified", False):
+        return jsonify({"error": "email_not_verified"}), 403
+
+    access, refresh = issue_tokens(user["_id"])
+    return jsonify({"access": access, "refresh": refresh})
+
+@app.route("/auth/request-password-reset", methods=["POST"])
+def request_password_reset():
+    data = request.json or {}
+    email = (data.get("email") or "").strip().lower()
+    user = users.find_one({"email": email})
+    if not user:
+        # Absichtlich generisch, damit Angreifer nicht erkennen ob Email existiert
+        return jsonify({"ok": True})
+    
+    token = email_signer.dumps({"uid": str(user["_id"])}, salt="pw-reset")
+    reset_url = f"{PUBLIC_APP_URL}/reset-password?token={token}"
+
+    send_email(user["email"], "Reset your password", f"Klicke hier: {reset_url}")
+
+    return jsonify({"ok": True})
+
+
+@app.route("/auth/reset-password", methods=["POST"])
+def reset_password():
+    data = request.json or {}
+    token = data.get("token")
+    new_pw = data.get("password")
+
+    if not token or not new_pw:
+        return jsonify({"error": "token_and_password_required"}), 400
+
+    try:
+        info = email_signer.loads(token, salt="pw-reset", max_age=3600)  # 1h gültig
+    except Exception:
+        return jsonify({"error": "invalid_or_expired"}), 400
+
+    uid = info["uid"]
+    hashed = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt()).decode()
+    users.update_one({"_id": ObjectId(uid)}, {"$set": {"password": hashed}})
+
+    return jsonify({"ok": True})
+
+@jwt.token_in_blocklist_loader
+def check_if_token_revoked(jwt_header, jwt_payload):
+    jti = jwt_payload["jti"]
+    return revoked.find_one({"jti": jti}) is not None
+
+@app.route("/auth/logout", methods=["POST"])
+@jwt_required()
+def logout():
+    jti = get_jwt()["jti"]
+    revoked.insert_one({"jti": jti, "exp": get_jwt()["exp"]})
+    return jsonify({"msg": "token revoked"})
+
+
+print("Registrierte Routen:")
+for rule in app.url_map.iter_rules():
+    print(rule)
 
 if __name__ == '__main__':  # Startet die Flask-App
     app.run(host='0.0.0.0', port=3050)
-
