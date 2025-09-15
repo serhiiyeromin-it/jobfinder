@@ -50,6 +50,7 @@ services:
   # 🎨 Frontend
   frontend:
     build: ./frontend
+    image: nightcrawler-frontend:latest
     # image: mrrobob/nightcrawler-frontend:${IMAGE_TAG:-latest}
     container_name: frontend
     pull_policy: always

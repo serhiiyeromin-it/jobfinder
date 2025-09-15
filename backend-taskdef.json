@@ -1,0 +1,47 @@
+{
+  "family": "nightcrawler-backend",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::424006328976:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::424006328976:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "nightcrawler-backend",
+      "image": "424006328976.dkr.ecr.eu-central-1.amazonaws.com/nightcrawler-backend:latest",
+      "portMappings": [
+        { "containerPort": 3050, "protocol": "tcp" }
+      ],
+      "essential": true,
+      "environment": [
+        { "name": "BACKEND_PORT", "value": "3050" }
+      ],
+      "secrets": [
+        {
+          "name": "MONGODB_URI",
+          "valueFrom": "arn:aws:secretsmanager:eu-central-1:424006328976:secret:nightcrawler/MONGO_URI-QGuODN"
+        },
+        {
+          "name": "JWT_SECRET",
+          "valueFrom": "arn:aws:secretsmanager:eu-central-1:424006328976:secret:nightcrawler/JWT_SECRET-JFfAMg"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/nightcrawler-backend",
+          "awslogs-region": "eu-central-1",
+          "awslogs-stream-prefix": "backend"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:3050/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 30
+      }
+    }
+  ]
+}
