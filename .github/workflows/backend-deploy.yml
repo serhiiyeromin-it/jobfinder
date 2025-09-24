@@ -9,10 +9,6 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: backend   # <- dein Backend-Ordner
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,13 +19,14 @@ jobs:
           python-version: '3.13'
 
       - name: Install dependencies
+        working-directory: backend
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Verify entrypoint
-        run: |
-          test -f server.py || (echo "server.py fehlt in backend/" && exit 1)
+      - name: Zip artifact
+        working-directory: backend
+        run: zip -r ../api.zip . -x "*/__pycache__/*" ".venv/*"
 
       - name: Zip artifact
         run: |
@@ -39,6 +36,6 @@ jobs:
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
-          app-name: Night-Crawler-Backend   # EXAKT wie im Azure-Portal (Overview)
+          app-name: Night-Crawler-Backend
           package: api.zip
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_BACKEND }}
