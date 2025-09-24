@@ -3,7 +3,7 @@
 Ein **Full‑Stack Job‑Crawler** mit React/Vite Frontend, Flask‑Backend und MongoDB.
 Ziel: automatisierte Suche und Verwaltung von Stellenanzeigen (u. a. über die Jobbörse der Bundesagentur für Arbeit), inkl. Such‑Alerts, Lesezeichen und E‑Mail‑Benachrichtigungen.
 
-> **Kurzfassung**: React UI → Flask API → MongoDB. CI via GitHub Actions. Deploy per Docker Compose oder Kubernetes.
+> **Kurzfassung**: React UI → Flask API → MongoDB. CI via GitHub Actions. Deploy per Docker Compose, Azure App Service oder Kubernetes.
 
 ---
 
@@ -22,6 +22,7 @@ Ziel: automatisierte Suche und Verwaltung von Stellenanzeigen (u. a. über die
   - [Deployment](#deployment)
     - [Docker Images](#docker-images)
     - [Docker Compose](#docker-compose)
+    - [Azure App Service](#azure-app-service)
     - [Kubernetes (optional)](#kubernetes-optional)
   - [Projektstruktur](#projektstruktur)
   - [FAQ](#faq)
@@ -33,33 +34,25 @@ Ziel: automatisierte Suche und Verwaltung von Stellenanzeigen (u. a. über die
 
 ## Architektur
 
-```text
-[Browser]
-   │
-   ▼
-React (Vite)  ───▶  Flask API  ───▶  MongoDB
-  (Frontend)        (Backend)        (Datenbank)
-        ▲                 │
-        └──── E‑Mail (optional, Flask‑Mail) 
-```
+![Architecture](nightcrawler-architecture.svg)
 
-- **Frontend**: Single‑Page‑App in React/Vite, kommuniziert über `VITE_API_URL` mit dem Backend
-- **Backend**: Flask‑API, Crawler-Logik (z. B. BAA‑API), Scheduling (APScheduler), Mails (Flask‑Mail)
-- **Datenhaltung**: MongoDB (Sammlungen für Such‑Alerts, Suchergebnisse, Bookmarks)
-- **Automatisierung**: GitHub Actions für Linting, Tests, Docker‑Builds
-- **Container/Orchestrierung**: Docker‑Images + `docker-compose.yml`; K8s‑Manifeste in `all-in-one.yaml`
+Der Datenfluss: Browser → Vite/React (SPA) → Flask API → MongoDB.  
+Side‑Channels: Logs → Logstash → Elasticsearch → Kibana · Metriken via Node Exporter/Prometheus → Grafana.
 
----
+- Frontend: React (Vite), `VITE_API_URL` zeigt auf das Backend.
+- Backend: Flask + APScheduler (Jobs), Flask‑Mail (E‑Mails), JWT Auth, `/health` Endpoint.
+- Datenbank: MongoDB (`job_database`, Collections `jobs`, `search_alerts`, `search_results`).
+- Observability: ELK + Prometheus/Grafana (siehe `docker-compose.yml`).
 
 ## Tech‑Stack
 
 | Ebene        | Technologie(n) |
 |--------------|-----------------|
 | **Frontend** | React, Vite, React Router, ESLint, Prettier |
-| **Backend**  | Python 3.11, Flask, Flask‑CORS, Flask‑Mail, APScheduler, Requests, BeautifulSoup, `python-dotenv` |
-| **Datenbank**| MongoDB (`pymongo`) |
-| **CI/CD**    | GitHub Actions (Lint, Tests, Docker CI) |
-| **Container**| Docker, Docker Compose; optional Kubernetes (Namespace, Deployments, Services, Secrets) |
+| **Backend**  | Python 3.11, Flask, Flask‑CORS, Flask‑Mail, APScheduler, Requests, BeautifulSoup, python‑dotenv |
+| **Datenbank**| MongoDB (pymongo) |
+| **CI/CD**    | GitHub Actions (Lint, Tests, Docker CI, Deploy) |
+| **Container**| Docker, Docker Compose; optional Kubernetes |
 
 ---
 
@@ -67,9 +60,9 @@ React (Vite)  ───▶  Flask API  ───▶  MongoDB
 
 ### Variante A: Docker Compose
 
-Voraussetzungen: **Docker** & **Docker Compose** installiert.
+Voraussetzungen: Docker & Docker Compose installiert.
 
-1. **.env** (im Projekt‑Root) anlegen:
+1. `.env` (im Projekt‑Root) anlegen:
 
    ```env
    MONGO_URI=mongodb://localhost:27017/nightcrawler
@@ -80,24 +73,24 @@ Voraussetzungen: **Docker** & **Docker Compose** installiert.
    MAIL_PASSWORD=supersecret
    ```
 
-2. **Compose starten**:
+2. Compose starten:
 
    ```bash
    docker compose up -d
    ```
 
-3. **Öffnen**: Frontend unter http://localhost:5173  
-   (Backend lauscht auf http://localhost:3050)
+3. Öffnen: Frontend → http://localhost:5173  
+   Backend → http://localhost:3050 (laut Compose) / ggf. http://localhost:5000 lokal
 
-> Hinweis: Das Compose‑File verwendet die Images `mrrobob/nightcrawler-frontend` und `mrrobob/nightcrawler-backend` und verbindet die Services über das interne Netzwerk `appnet`.
+> Das Compose‑File verwendet die Images `mrrobob/nightcrawler-frontend` und `mrrobob/nightcrawler-backend` und verbindet die Services über `appnet`.
 
 ### Variante B: Lokal (Dev)
 
-**Backend** (Python 3.11):  
+**Backend** (Python 3.11):
 
 ```bash
 cd backend
-python -m venv .venv && source .venv/bin/activate  # Windows: .venv\Scripts\activate
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 export MONGO_URI="mongodb://localhost:27017/nightcrawler"
 export BAA_API_KEY="jobboerse-jobsuche"
@@ -108,10 +101,10 @@ export MAIL_USERNAME="example@example.com"
 export MAIL_PASSWORD="supersecret"
 
 python server.py
-# → läuft standardmäßig auf http://127.0.0.1:5000 (oder laut server.py-Konfiguration)
+# → läuft auf http://127.0.0.1:5000 (oder gemäß server.py/WEBSITES_PORT)
 ```
 
-**Frontend** (Node 18+ empfohlen):  
+**Frontend** (Node 18+ empfohlen):
 
 ```bash
 cd frontend
@@ -136,7 +129,7 @@ npm run dev
 
 - `VITE_API_URL` – Basis‑URL zum Backend (z. B. `http://localhost:5000` oder `http://backend:3050` im Compose)
 
-> Beispiel‑Datei: `.env.example` im Projekt‑Root.
+Beispiel: `.env.example` im Projekt‑Root.
 
 ---
 
@@ -144,10 +137,10 @@ npm run dev
 
 | Route | Methoden | Beschreibung |
 |------:|:--------:|--------------|
-| `/health` | GET | Gesundheitscheck (zum Monitoring/CI) |
-| `/jobsuchen` | GET, POST | Allgemeine Jobsuche (Parameter im Body/Query) |
-| `/jobsuchen_baa` | POST | Jobsuche über BAA‑API (Keywords, Ort, Radius) |
-| `/bookmarked_jobs` | GET | Liste aller gespeicherten Bookmarks |
+| `/health` | GET | Gesundheitscheck (Monitoring/CI) |
+| `/jobsuchen` | GET, POST | Allgemeine Jobsuche |
+| `/jobsuchen_baa` | POST | Jobsuche über BAA‑API |
+| `/bookmarked_jobs` | GET | Liste der Bookmarks |
 | `/update_bookmark` | POST | Bookmark anlegen/aktualisieren |
 | `/save_search` | POST | Such‑Alert anlegen |
 | `/search_alerts` | GET | Alle Such‑Alerts abrufen |
@@ -155,21 +148,22 @@ npm run dev
 | `/delete_search_alert/<id>` | DELETE | Such‑Alert löschen |
 | `/get_search_results/<alert_id>` | GET | Ergebnisse zu einem Alert abrufen |
 
-> Details und Felder siehe `backend/server.py`. Datenmodell in `backend/mongodb_connect.py`.
+Details siehe `backend/server.py`. Datenmodell: `backend/mongodb_connect.py`.
 
 ---
 
 ## CI/CD
 
-GitHub Actions Workflows (Auszug):
+GitHub Actions (Auszug):
 
-- **backend-unit-test.yml** – `pytest` mit Coverage (Schwelle z. B. 70%)
-- **backend-lint-fix.yml** – `flake8`/`black`
-- **frontend-lint-fix.yml** – ESLint/Prettier
-- **markdown-lint-fix.yml** – Markdown Lint mit Auto‑Fix
-- **docker-ci.yml** – Docker Build/Push
+- `backend-unit-test.yml` – `pytest` mit Coverage
+- `backend-lint-fix.yml` – `flake8`/`black`
+- `frontend-lint-fix.yml` – ESLint/Prettier
+- `markdown-lint-fix.yml` – Markdown Lint (Auto‑Fix)
+- `docker-ci.yml` – Docker Build/Push
+- `backend-deploy.yml`, `frontend-deploy.yml` – Azure App Service Deploy
 
-Empfehlung: Diese Workflows unter **Branch Protection** als „required checks“ setzen.
+Empfehlung: Workflows als „required checks“ in Branch Protection konfigurieren.
 
 ---
 
@@ -182,12 +176,40 @@ Empfehlung: Diese Workflows unter **Branch Protection** als „required checks�
 
 ### Docker Compose
 
-Siehe `docker-compose.yml` (Ports `3050` Backend, `5173` Frontend).
+Siehe `docker-compose.yml` (Ports: Backend 3050, Frontend 5173).
+
+### Azure App Service
+
+Zwei WebApps (Linux): **Backend** und **Frontend**. Deployment via GitHub Actions.
+
+**Secrets (GitHub):**
+
+- `AZUREAPPSERVICE_PUBLISHPROFILE_BACKEND`
+- `AZUREAPPSERVICE_PUBLISHPROFILE_FRONTEND`
+
+**Backend WebApp – App Settings:**
+
+- `MONGO_URI`, `JWT_SECRET`, optional `BAA_API_KEY`
+- `MAIL_*` Variablen, `PUBLIC_APP_URL` (Produktions‑Frontend‑URL)
+
+**Backend Startup:**
+
+```bash
+gunicorn server:app -b 0.0.0.0:${PORT:-3050}
+# alternativ: python server.py + WEBSITES_PORT=3050
+```
+
+**Frontend WebApp – App Settings:**
+
+- `VITE_API_URL` auf **öffentliche Backend‑URL** setzen (kein localhost)
+
+**CORS/Login Hinweis:**
+
+- Frontend darf in Prod nicht auf `localhost` zeigen. Backend‑CORS muss die öffentliche Frontend‑Domain erlauben.
 
 ### Kubernetes (optional)
 
-Im Repo: `all-in-one.yaml` mit Namespace, Secrets, Deployments und Services für MongoDB, Backend & Frontend.  
-Beispiele:
+`all-in-one.yaml` enthält Namespace, Secrets, Deployments und Services für MongoDB, Backend, Frontend.
 
 ```bash
 kubectl apply -f all-in-one.yaml
@@ -199,21 +221,93 @@ kubectl delete all --all -n nightcrawler
 ## Projektstruktur
 
 ```text
-.
-├── backend/                 # Flask-API, Crawler, Tests
-│   ├── server.py
-│   ├── requirements.txt
-│   ├── mongodb_connect.py
+├── .github/
+│   ├── workflows/
+│   │   ├── backend-deploy.yml
+│   │   ├── backend-lint-fix.yml
+│   │   ├── backend-unit-test.old
+│   │   ├── codeql.yml
+│   │   ├── docker-ci.yml
+│   │   ├── frontend-deploy.yml
+│   │   ├── frontend-lint-fix.yml
+│   │   ├── markdown-lint-fix.yml
+│   │   ├── mongo-backup.yml
+│   │   └── trivy-scan.yml
+│   └── dependabot.yml
+├── backend/
+│   ├── tests/
+│   │   ├── __init__.py
+│   │   ├── conftest.py
+│   │   ├── test_crawler_api_baa.py
+│   │   ├── test_mongodb_connect.py
+│   │   ├── test_server.py
+│   │   ├── test_server_additional.py
+│   │   └── test_server_crud.py
+│   ├── backend_README.md
+│   ├── crawl_stepstone.py
 │   ├── crawler_api_baa.py
-│   └── tests/
-├── frontend/                # React/Vite SPA
+│   ├── Dockerfile
+│   ├── mongodb_connect.py
+│   ├── requirements.txt
+│   └── server.py
+├── backups/
+│   ├── job_database-2025-09-09/
+│   │   └── job_database/
+│   │       ├── jobs.bson
+│   │       ├── jobs.metadata.json
+│   │       ├── prelude.json
+│   │       ├── search_alerts.bson
+│   │       ├── search_alerts.metadata.json
+│   │       ├── search_results.bson
+│   │       └── search_results.metadata.json
+│   └── search_results.json
+├── frontend/
 │   ├── src/
+│   │   ├── components/
+│   │   │   ├── BookmarkedJobs.jsx
+│   │   │   ├── FooterLegal.jsx
+│   │   │   ├── HeaderBar.jsx
+│   │   │   ├── ProtectedRoute.jsx
+│   │   │   ├── SearchAlerts.jsx
+│   │   │   ├── SearchForm.jsx
+│   │   │   ├── SearchResults.jsx
+│   │   │   └── Sidebar.jsx
+│   │   ├── context/
+│   │   │   └── AuthProvider.jsx
+│   │   ├── lib/
+│   │   │   └── auth.js
+│   │   ├── pages/
+│   │   │   ├── Datenschutz.jsx
+│   │   │   ├── Impressum.jsx
+│   │   │   ├── Kontakt.jsx
+│   │   │   ├── Landing.jsx
+│   │   │   ├── License.jsx
+│   │   │   ├── Login.jsx
+│   │   │   ├── Register.jsx
+│   │   │   ├── RequestReset.jsx
+│   │   │   ├── ResetPassword.jsx
+│   │   │   └── VerifyEmail.jsx
+│   │   ├── App.jsx
+│   │   ├── index.css
+│   │   └── main.jsx
+│   ├── Dockerfile
+│   ├── eslint.config.js
+│   ├── frontend_README.md
+│   ├── index.html
+│   ├── package-lock.json
 │   ├── package.json
 │   └── vite.config.js
+├── logstash/
+│   └── logstash.conf
+├── prometheus/
+│   └── prometheus.yml
+├── all-in-one.yaml
+├── backend-taskdef.json
+├── backup-mongo.ps1
+├── CONTRIBUTING.md
 ├── docker-compose.yml
-├── all-in-one.yaml          # Kubernetes Manifeste (Namespace, Secrets, Deployments, Services)
-├── .github/workflows/       # CI/CD
-├── .env.example
+├── LICENSE.md
+├── monitor_README.md
 └── README.md
 ```
 
@@ -222,51 +316,38 @@ kubectl delete all --all -n nightcrawler
 ## FAQ
 
 **Was crawlt der Night Crawler?**  
-Aktuell u. a. die Jobbörse der **Bundesagentur für Arbeit** via API; Erweiterungen (z. B. StepStone) sind vorgesehen.
+Unter anderem die Jobbörse der Bundesagentur für Arbeit via API; weitere Quellen möglich.
 
 **Wo werden Daten gespeichert?**  
-In **MongoDB** (Sammlungen für Alerts, Ergebnisse, Bookmarks; eindeutige Indizes zur Duplikatvermeidung).
+In MongoDB (Sammlungen für Alerts, Ergebnisse, Bookmarks; eindeutige Indizes zur Duplikatvermeidung).
 
 **Wie bekomme ich E‑Mails?**  
 Mail‑Server‑Daten in ENV setzen (`MAIL_*`). Das Backend nutzt Flask‑Mail.
 
 **Kann ich die Suche zeitgesteuert laufen lassen?**  
-Ja, über **APScheduler** (siehe Backend‑Code). Alternativ externe Cron/Workflows.
+Ja, über APScheduler im Backend oder externe Scheduler.
 
 ---
 
 ## Troubleshooting
 
-- **Backend startet nicht / 5000 blockiert**  
-  Prüfe, ob Port frei ist; ggf. `FLASK_RUN_PORT` oder Code‑Port ändern.
-
-- **MongoDB‑Verbindung schlägt fehl**  
-  `MONGO_URI` prüfen (Host/Port/Auth). Teste mit `mongosh`/`mongo` CLI.
-
-- **CORS‑Fehler im Browser**  
-  Stelle sicher, dass `Flask‑CORS` aktiviert ist und `VITE_API_URL` korrekt gesetzt ist.
-
-- **Docker Compose: Frontend erreicht Backend nicht**  
-  In Compose kommuniziert das Frontend mit `http://backend:3050`. Stelle sicher, dass `VITE_API_URL` entsprechend gesetzt ist (ENV oder Build‑Zeit).
-
-- **BAA‑API liefert keine Ergebnisse**  
-  `BAA_API_KEY` prüfen, Request‑Parameter (Keywords/Ort/Radius) validieren, Logging checken.
-
-- **GitHub Actions: Required Checks fehlen**  
-  Workflows müssen einmal laufen, damit sie unter **Settings → Branches → Protection Rules** auswählbar sind.
+- Backend startet nicht / Port 5000 belegt: Port anpassen (`FLASK_RUN_PORT` oder Code).
+- MongoDB‑Verbindung schlägt fehl: `MONGO_URI` prüfen; mit `mongosh` testen.
+- CORS‑Fehler: `Flask‑CORS` aktiv und `VITE_API_URL` korrekt?
+- Docker Compose: Frontend erreicht Backend nicht → `VITE_API_URL=http://backend:3050` setzen.
+- BAA‑API liefert keine Ergebnisse: `BAA_API_KEY` und Parameter prüfen; Logs ansehen.
 
 ---
 
 ## Roadmap
 
-- Mehr Datenquellen (StepStone reaktivieren, weitere Portale)
-- User‑Accounts & persistente Einstellungen
+- Weitere Datenquellen (StepStone et al.)
 - UI‑Verbesserungen (Filter, Paginierung, Export)
-- Alert‑Scheduling im UI konfigurierbar
-- Docker‑Builds für **multi‑arch** Images
+- Alert‑Scheduling im UI
+- Multi‑Arch Docker Images
 
 ---
 
 ## Lizenz
 
-© {2025} – Roman Smirnov, Project Night Crawler. (PolyForm Noncommercial License 1.0.0)
+© 2025 – Roman Smirnov, Project Night Crawler. PolyForm Noncommercial License 1.0.0.
