@@ -1,4 +1,4 @@
-name: Deploy Web (Vite) to Azure App Service
+name: Deploy Frontend to Azure App Service
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
@@ -24,8 +24,10 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Build
+      - name: Build (inject VITE_API_URL)
         working-directory: frontend
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL_PROD }}
         run: npm run build
 
       - name: Zip dist -> web.zip (root)
