@@ -31,6 +31,8 @@ jobs:
 
       - name: Build and push frontend image
         run: |
+          echo "VITE_API_URL=${{ secrets.FRONTEND_API_URL }}" > frontend/.env.production
+          
           docker build -t ${{ secrets.dockerhub_username }}/nightcrawler-frontend:latest ./frontend
           docker push ${{ secrets.dockerhub_username }}/nightcrawler-frontend:latest
           
