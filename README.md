@@ -169,7 +169,7 @@ Empfehlung: Workflows als „required checks“ in Branch Protection konfigurier
 
 ## Deployment
 
-## Deployment (Azure)
+### Deployment (Azure)
 ### Docker Images
 
 - `mrrobob/nightcrawler-backend`
@@ -221,12 +221,12 @@ kubectl delete all --all -n nightcrawler
 
 ### Docker Images (Backend & Frontend)
 
-mrrobob/nightcrawler-backend  
-mrrobob/nightcrawler-frontend
+- `mrrobob/nightcrawler-backend`  
+- `mrrobob/nightcrawler-frontend`
 
 ### Docker Compose (EC2 Deployment)
 
-Siehe docker-compose.yml (Ports: Backend 3050, Frontend 5173).
+Siehe `docker-compose.yml` (Ports: **Backend 3050**, **Frontend 5173**).
 
 ### AWS EC2
 
@@ -236,25 +236,25 @@ Das Projekt wird aus GitHub geklont, die .env-Datei enthält alle notwendigen Va
 Die Container für Backend, Frontend und MongoDB werden über `docker compose up -d` gestartet.  
 Docker Engine lädt die Images automatisch aus Docker Hub.
 
-### Secrets (.env auf EC2):
+**Secrets (.env auf EC2):**
 
-MONGO_URI, JWT_SECRET, optional BAA_API_KEY  
-MAIL_* Variablen, PUBLIC_APP_URL (Produktions-Frontend-URL)
+- `MONGO_URI`, `JWT_SECRET`, optional `BAA_API_KEY` 
+- `MAIL_*` Variablen, `PUBLIC_APP_URL` (Produktions-Frontend-URL)
 
-### Backend – App Settings:
+**Backend – App Settings:**
 
-Läuft mit gunicorn auf Port 3050  
-Verbindet sich mit MongoDB Atlas über MONGO_URI
+- Läuft mit gunicorn auf Port 3050  
+- Verbindet sich mit MongoDB Atlas über `MONGO_URI`
 
-### Frontend – App Settings:
+**Frontend – App Settings:**
 
-VITE_API_URL zeigt auf die öffentliche Backend-Adresse  
-Keine lokalen URLs verwenden
+- `VITE_API_URL` zeigt auf die öffentliche Backend-Adresse  
+- Keine lokalen URLs verwenden
 
-### CORS/Login Hinweis:
+**CORS/Login Hinweis:**
 
-Backend-CORS erlaubt ausschließlich die öffentliche Frontend-Domain  
-Frontend darf in Produktion nicht auf localhost zeigen
+- Backend-CORS erlaubt ausschließlich die öffentliche Frontend-Domain  
+- Frontend darf in Produktion nicht auf `localhost` zeigen
 
 ---
 
