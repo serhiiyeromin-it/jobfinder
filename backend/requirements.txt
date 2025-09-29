@@ -15,4 +15,4 @@ itsdangerous
 pyotp
 qrcode
 Pillow
-
+gunicorn

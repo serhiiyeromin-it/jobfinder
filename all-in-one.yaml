@@ -59,6 +59,13 @@ spec:
         image: mongo:7
         ports:
         - containerPort: 27017
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
         volumeMounts:
         - name: data
           mountPath: /data/db
@@ -110,6 +117,13 @@ spec:
             until mongosh "mongodb://$(MONGO_HOST):$(MONGO_PORT)/admin" \
               --eval 'db.runCommand({ ping: 1 })' >/dev/null 2>&1; do \
               echo "[init] жду mongo..."; sleep 2; done;
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
         env:
           - name: MONGO_HOST
             valueFrom:
@@ -127,6 +141,13 @@ spec:
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3050
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
         env:
         - name: BAA_API_KEY
           valueFrom:
@@ -185,8 +206,10 @@ spec:
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 5173
-
-
----
-
-
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
